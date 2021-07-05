@@ -1,8 +1,8 @@
-# Backboan
+# Backbone
 
-## What is Backboan
+## What is Backbone
 
-Backboan is a Python package than enables you to deliver fast back-end software components. 
+Backbone is a Python package than enables you to deliver fast back-end software components. 
 If you are a technical founder or a developer, use this package to build everything you need to launch and grow high-quality SaaS application.
 Every SaaS application needs these components
 * Micro-services

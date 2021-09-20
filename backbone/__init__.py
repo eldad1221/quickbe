@@ -1,6 +1,50 @@
 import uuid
+from flask import Flask, request
 import backbone.logger as b_logger
 from datetime import datetime, timedelta
+
+WEB_SERVER_ENDPOINTS = {}
+
+
+def endpoint(path: str = None):
+
+    def decorator(func):
+        global WEB_SERVER_ENDPOINTS
+        if path is None:
+            web_path = str(func.__qualname__).lower().replace('.', '/')
+        else:
+            web_path = path
+        Log.debug(f'Registering endpoint: Path={web_path}, Function={func}')
+        WEB_SERVER_ENDPOINTS[web_path] = func
+        return func
+
+    return decorator
+
+
+class WebServer:
+
+    app = Flask(__name__)
+
+    @staticmethod
+    @app.route('/health', methods=['GET'])
+    def health():
+        return 'OK'
+
+    @staticmethod
+    @app.route('/<path>', methods=['GET'])
+    def dynamic_get(path: str):
+        req_body = dict(request.args)
+        return WEB_SERVER_ENDPOINTS.get(path)(req_body)
+
+    @staticmethod
+    @app.route('/<path>', methods=['POST'])
+    def dynamic_post(path: str):
+        req_body = dict(request.get_json())
+        return WEB_SERVER_ENDPOINTS.get(path)(req_body)
+
+    @staticmethod
+    def start(apis: list):
+        WebServer.app.run(host='0.0.0.0', port=8888)
 
 
 class Log:

@@ -1,5 +1,8 @@
 import os.path
+import datetime
 import unittest
+import uuid
+
 from backbone import Log
 import backbone.vault as vault
 
@@ -34,6 +37,15 @@ class CryptoTestCase(unittest.TestCase):
         all_keys = vault.load_all_keys()
         Log.debug(f'{all_keys}')
         self.assertEqual(True, key_token in all_keys)
+
+    def test_save_secret(self):
+        vault.load_all_keys()
+        vault.save_secret(
+            secret_name=f'VALUE_{uuid.uuid4()}',
+            value=str(datetime.datetime.now()),
+            secret_path='testing/unittests'
+        )
+        self.assertEqual(True, True)
 
 
 if __name__ == '__main__':

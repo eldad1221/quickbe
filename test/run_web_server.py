@@ -3,21 +3,14 @@ from backbone import WebServer, endpoint, Log
 
 @endpoint(path='hi')
 def say_hello(req: dict):
+    # Log.debug(req.get('text'))
     return 'Hello'
 
 
-@endpoint()
+@endpoint(validation={'text': {'required': True, 'type': 'string'}})
 def echo(req: dict):
     return req.get('text')
 
 
-class World:
-
-    @staticmethod
-    @endpoint()
-    def hello(req):
-        return 'Hello world'
-
-
 if __name__ == '__main__':
-    WebServer.start(apis=[])
+    WebServer.start()

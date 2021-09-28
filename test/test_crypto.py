@@ -29,7 +29,7 @@ class CryptoTestCase(unittest.TestCase):
         key, key_token = vault.generate_crypto_key()
         file_path = vault.VAULT_KEY_PATH.replace(vault.KEY_TOKEN_STR, key_token)
         self.assertEqual(True, os.path.isfile(file_path))
-        self.assertEqual(key, vault.read_key(key_token=key_token))
+        self.assertEqual(key.decode(), vault.read_key(key_token=key_token))
 
     def test_load_all_keys(self):
         key, key_token = vault.generate_crypto_key()
@@ -38,14 +38,20 @@ class CryptoTestCase(unittest.TestCase):
         Log.debug(f'{all_keys}')
         self.assertEqual(True, key_token in all_keys)
 
-    def test_save_secret(self):
+    def test_save_and_read_secret(self):
         vault.load_all_keys()
+        original_data = str(datetime.datetime.now())
+        secret_path = 'testing/unittests'
+        secret_name = f'VALUE_{uuid.uuid4()}'
         vault.save_secret(
-            secret_name=f'VALUE_{uuid.uuid4()}',
-            value=str(datetime.datetime.now()),
-            secret_path='testing/unittests'
+            secret_name=secret_name,
+            value=original_data,
+            secret_path=secret_path
         )
-        self.assertEqual(True, True)
+
+        value = vault.read_secret(secret_name=secret_name, secret_path=secret_path)
+
+        self.assertEqual(value, original_data)
 
 
 if __name__ == '__main__':

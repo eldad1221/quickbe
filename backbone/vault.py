@@ -1,3 +1,4 @@
+import json
 import uuid
 from git import Repo
 from pathlib import Path
@@ -101,13 +102,36 @@ def get_repo(name: str = DEFAULT_VAULT) -> Repo:
     return repo
 
 
+def get_repo_path(repo) -> str:
+    return repo.git.working_dir
+
+
 def save_secret(secret_name: str, value: str, secret_path: str):
     repo = get_repo()
-    path = Path(join(repo.index.path.replace('.git', ''), secret_path))
+    path = Path(join(get_repo_path(repo=repo), secret_path))
     if not path.is_dir():
         path.mkdir(parents=True)
 
     file = open(join(path, f'{secret_name}.scr'), 'w')
     current_token = BACKBONE_VAULT_ALL_KEYS[CURRENT_KEY_STR]
-    file.writelines([current_token, '\n', encrypt(key_token=current_token, data=value)])
+    data = {
+        'token': current_token,
+        'value': encrypt(key_token=current_token, data=value)
+    }
+    file.write(json.dumps(data))
     file.close()
+
+
+def read_secret(secret_name: str, secret_path: str) -> str:
+    repo = get_repo()
+    path = Path(join(get_repo_path(repo=repo), secret_path))
+    if not path.is_dir():
+        raise FileNotFoundError(f'Cant find secret {secret_path}/{secret_name}')
+
+    file = open(join(path, f'{secret_name}.scr'), 'r')
+    current_token = BACKBONE_VAULT_ALL_KEYS[CURRENT_KEY_STR]
+    data = json.load(file)
+    file.close()
+
+    value = decrypt(key_token=data['token'], data=data['value'])
+    return value

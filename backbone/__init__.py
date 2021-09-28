@@ -1,21 +1,42 @@
 import uuid
+from datetime import datetime
+from cerberus import Validator
 from flask import Flask, request
 import backbone.logger as b_logger
-from datetime import datetime, timedelta
 
 WEB_SERVER_ENDPOINTS = {}
+WEB_SERVER_ENDPOINTS_VALIDATIONS = {}
 
 
-def endpoint(path: str = None):
+def _endpoint_function(path: str):
+    if path in WEB_SERVER_ENDPOINTS:
+        return WEB_SERVER_ENDPOINTS.get(path)
+    else:
+        raise NotImplemented(f'No implementation for path {path}.')
+
+
+def _endpoint_validator(path: str) -> Validator:
+    if path in WEB_SERVER_ENDPOINTS_VALIDATIONS:
+        return WEB_SERVER_ENDPOINTS_VALIDATIONS.get(path)
+    else:
+        return None
+
+
+def endpoint(path: str = None, validation: dict = None):
 
     def decorator(func):
         global WEB_SERVER_ENDPOINTS
+        global WEB_SERVER_ENDPOINTS_VALIDATIONS
         if path is None:
             web_path = str(func.__qualname__).lower().replace('.', '/')
         else:
             web_path = path
         Log.debug(f'Registering endpoint: Path={web_path}, Function={func}')
         WEB_SERVER_ENDPOINTS[web_path] = func
+        if isinstance(validation, dict):
+            validator = Validator(validation)
+            validator.allow_unknown = True
+            WEB_SERVER_ENDPOINTS_VALIDATIONS[web_path] = validator
         return func
 
     return decorator
@@ -31,19 +52,24 @@ class WebServer:
         return 'OK'
 
     @staticmethod
-    @app.route('/<path>', methods=['GET'])
+    @app.route('/favicon.ico', methods=['GET'])
+    def favicon():
+        return ''
+
+    @staticmethod
+    @app.route('/<path>', methods=['GET', 'POST'])
     def dynamic_get(path: str):
-        req_body = dict(request.args)
-        return WEB_SERVER_ENDPOINTS.get(path)(req_body)
+        req_body = request.get_json()
+        if req_body is None:
+            req_body = {}
+        validator = _endpoint_validator(path=path)
+        if validator is not None:
+            if not validator.validate(req_body):
+                return validator.errors
+        return _endpoint_function(path=path)(req_body)
 
     @staticmethod
-    @app.route('/<path>', methods=['POST'])
-    def dynamic_post(path: str):
-        req_body = dict(request.get_json())
-        return WEB_SERVER_ENDPOINTS.get(path)(req_body)
-
-    @staticmethod
-    def start(apis: list):
+    def start():
         WebServer.app.run(host='0.0.0.0', port=8888)
 
 

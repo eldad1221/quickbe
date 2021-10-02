@@ -1,4 +1,4 @@
-from backbone import WebServer, HttpSession, endpoint, Log
+from quickbe import WebServer, HttpSession, endpoint, Log
 
 
 @endpoint(path='hi')

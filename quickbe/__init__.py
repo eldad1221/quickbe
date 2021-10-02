@@ -6,7 +6,7 @@ from cerberus import Validator
 from inspect import getfullargspec
 from flask.wrappers import Response, Request
 from flask import Flask, request, make_response
-import backbone.logger as b_logger
+import quickbe.logger as b_logger
 
 
 def get_env_var(key: str, default: str = None) -> str:
@@ -25,7 +25,7 @@ def get_env_var_as_int(key: str, default: int = 0) -> int:
 
 WEB_SERVER_ENDPOINTS = {}
 WEB_SERVER_ENDPOINTS_VALIDATIONS = {}
-BACKBONE_WAITRESS_THREADS = get_env_var_as_int('BACKBONE_WAITRESS_THREADS', 10)
+QUICKBE_WAITRESS_THREADS = get_env_var_as_int('QUICKBE_WAITRESS_THREADS', 10)
 
 
 def _endpoint_function(path: str):
@@ -163,7 +163,7 @@ class WebServer:
 
     @staticmethod
     def start():
-        serve(app=WebServer.app, host='0.0.0.0', port=8888, threads=BACKBONE_WAITRESS_THREADS)
+        serve(app=WebServer.app, host='0.0.0.0', port=8888, threads=QUICKBE_WAITRESS_THREADS)
 
 
 class Log:

@@ -1,5 +1,5 @@
 import inspect
-from backbone import Log
+from quickbe import Log
 from abc import abstractmethod
 
 

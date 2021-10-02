@@ -1,12 +1,12 @@
 import unittest
-import backbone as bb
+import quickbe
 
 
-def demo_1(session: bb.HttpSession):
+def demo_1(session: quickbe.HttpSession):
     return session.get_parameter('text')
 
 
-def demo_2(session: bb.HttpSession, s: str):
+def demo_2(session: quickbe.HttpSession, s: str):
     return session.get_parameter('text')
 
 
@@ -18,13 +18,13 @@ class WebServerTestCase(unittest.TestCase):
 
     def test_http_handler(self):
 
-        self.assertEqual(True, bb._is_valid_http_handler(func=demo_1))
+        self.assertEqual(True, quickbe._is_valid_http_handler(func=demo_1))
 
         with self.assertRaises(TypeError):
-            self.assertEqual(True, bb._is_valid_http_handler(func=demo_2))
+            self.assertEqual(True, quickbe._is_valid_http_handler(func=demo_2))
 
         with self.assertRaises(TypeError):
-            self.assertEqual(True, bb._is_valid_http_handler(func=demo_3))
+            self.assertEqual(True, quickbe._is_valid_http_handler(func=demo_3))
 
 
 if __name__ == '__main__':

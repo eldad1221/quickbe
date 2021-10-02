@@ -1,8 +1,8 @@
 import os
 import uuid
+import quickbe
 import unittest
-import backbone as bb
-from backbone.vault import _remove_suffix
+from quickbe.vault import _remove_suffix
 
 
 class UtilsTestCase(unittest.TestCase):
@@ -14,9 +14,9 @@ class UtilsTestCase(unittest.TestCase):
         }
         for expected_val, value in test_cases.items():
             name = f'var_{uuid.uuid4()}'
-            self.assertEqual(expected_val, str(bb.get_env_var(key=name, default=value)))
+            self.assertEqual(expected_val, str(quickbe.get_env_var(key=name, default=value)))
             os.environ[name] = str(value)
-            self.assertEqual(expected_val, bb.get_env_var(key=name))
+            self.assertEqual(expected_val, quickbe.get_env_var(key=name))
 
     def test_get_env_var_as_int(self):
         test_cases = {
@@ -26,9 +26,9 @@ class UtilsTestCase(unittest.TestCase):
         }
         for expected_val, value in test_cases.items():
             name = f'var_{uuid.uuid4()}'
-            self.assertEqual(expected_val, bb.get_env_var_as_int(key=name, default=value))
+            self.assertEqual(expected_val, quickbe.get_env_var_as_int(key=name, default=value))
             os.environ[name] = str(value)
-            self.assertEqual(expected_val, bb.get_env_var_as_int(key=name))
+            self.assertEqual(expected_val, quickbe.get_env_var_as_int(key=name))
 
     def test_remove_suffix(self):
         test_cases = {

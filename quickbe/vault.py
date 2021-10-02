@@ -7,16 +7,16 @@ from os.path import join
 from os import listdir, getenv
 from cryptography.fernet import Fernet
 
-BACKBONE_VAULT_HOME_FOLDER = getenv('BACKBONE_VAULT_HOME_FOLDER', f'{Path.home()}/vault')
-BACKBONE_VAULT_KEYS_FOLDER = getenv('BACKBONE_VAULT_KEYS_FOLDER', f'{BACKBONE_VAULT_HOME_FOLDER}/keys')
-BACKBONE_VAULT_REPOSITORIES_FOLDER = getenv('BACKBONE_VAULT_REPOSITORIES_FOLDER', f'{BACKBONE_VAULT_HOME_FOLDER}/repos')
+QUICKBE_VAULT_HOME_FOLDER = getenv('QUICKBE_VAULT_HOME_FOLDER', f'{Path.home()}/vault')
+QUICKBE_VAULT_KEYS_FOLDER = getenv('QUICKBE_VAULT_KEYS_FOLDER', f'{QUICKBE_VAULT_HOME_FOLDER}/keys')
+QUICKBE_VAULT_REPOSITORIES_FOLDER = getenv('QUICKBE_VAULT_REPOSITORIES_FOLDER', f'{QUICKBE_VAULT_HOME_FOLDER}/repos')
 KEY_TOKEN_STR = '~token~'
 CURRENT_KEY_STR = 'current_key'
-VAULT_KEY_PATH = f'{BACKBONE_VAULT_KEYS_FOLDER}/{KEY_TOKEN_STR}.key'
+VAULT_KEY_PATH = f'{QUICKBE_VAULT_KEYS_FOLDER}/{KEY_TOKEN_STR}.key'
 SECRET_FILE_SUFFIX = '.scr'
 
 
-BACKBONE_VAULT_ALL_KEYS = {}
+QUICKBE_VAULT_ALL_KEYS = {}
 
 
 def generate_crypto_key(add_salt: bool = False) -> (bytes, str):
@@ -26,7 +26,7 @@ def generate_crypto_key(add_salt: bool = False) -> (bytes, str):
     :return: Tuple of key bytes and key token as string
     """
     crypto_key = Fernet.generate_key()
-    key_folder = Path(BACKBONE_VAULT_KEYS_FOLDER)
+    key_folder = Path(QUICKBE_VAULT_KEYS_FOLDER)
     if not key_folder.is_dir():
         key_folder.mkdir(parents=True)
     key_token = str(uuid.uuid4())
@@ -40,9 +40,9 @@ def generate_crypto_key(add_salt: bool = False) -> (bytes, str):
     file.write(key_token)
     file.close()
 
-    global BACKBONE_VAULT_ALL_KEYS
-    BACKBONE_VAULT_ALL_KEYS[key_token] = crypto_key
-    BACKBONE_VAULT_ALL_KEYS[CURRENT_KEY_STR] = key_token
+    global QUICKBE_VAULT_ALL_KEYS
+    QUICKBE_VAULT_ALL_KEYS[key_token] = crypto_key
+    QUICKBE_VAULT_ALL_KEYS[CURRENT_KEY_STR] = key_token
     return crypto_key, key_token
 
 
@@ -81,14 +81,14 @@ def decrypt(key_token: str, data: str) -> str:
 
 def load_all_keys() -> dict:
     all_keys = {}
-    key_files = [f for f in listdir(BACKBONE_VAULT_KEYS_FOLDER) if Path(join(BACKBONE_VAULT_KEYS_FOLDER, f)).is_file()]
+    key_files = [f for f in listdir(QUICKBE_VAULT_KEYS_FOLDER) if Path(join(QUICKBE_VAULT_KEYS_FOLDER, f)).is_file()]
     for file in key_files:
         key_token = str(file).replace('.key', '')
         key = read_key(key_token=key_token)
         all_keys[key_token] = key
 
-    global BACKBONE_VAULT_ALL_KEYS
-    BACKBONE_VAULT_ALL_KEYS = all_keys
+    global QUICKBE_VAULT_ALL_KEYS
+    QUICKBE_VAULT_ALL_KEYS = all_keys
     return all_keys
 
 
@@ -96,7 +96,7 @@ DEFAULT_VAULT = 'default_vault'
 
 
 def get_repo(name: str = DEFAULT_VAULT) -> Repo:
-    repo_path = f'{BACKBONE_VAULT_REPOSITORIES_FOLDER}/{name}'
+    repo_path = f'{QUICKBE_VAULT_REPOSITORIES_FOLDER}/{name}'
     if not Path(repo_path).is_dir():
         Repo.init(path=repo_path)
 
@@ -117,7 +117,7 @@ def save_secret(secret_path: str, secret_name: str, value: str, comment: str):
         path.mkdir(parents=True)
 
     file = open(join(path, f'{secret_name}{SECRET_FILE_SUFFIX}'), 'w')
-    current_token = BACKBONE_VAULT_ALL_KEYS[CURRENT_KEY_STR]
+    current_token = QUICKBE_VAULT_ALL_KEYS[CURRENT_KEY_STR]
     data = {
         'token': current_token,
         'value': encrypt(key_token=current_token, data=value),
@@ -138,7 +138,7 @@ def read_secret_data(secret_name: str, secret_path: str) -> dict:
         raise FileNotFoundError(f'Cant find secret path {secret_path}.')
 
     file = open(join(path, f'{secret_name}.scr'), 'r')
-    current_token = BACKBONE_VAULT_ALL_KEYS[CURRENT_KEY_STR]
+    current_token = QUICKBE_VAULT_ALL_KEYS[CURRENT_KEY_STR]
     data = json.load(file)
     file.close()
     comment = data.get('comment')

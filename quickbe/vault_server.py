@@ -1,6 +1,6 @@
 import json
-import backbone.vault as vault
-from backbone import WebServer, endpoint, Log, get_env_var, HttpSession
+import quickbe.vault as vault
+from quickbe import WebServer, endpoint, Log, get_env_var, HttpSession
 
 SECRET_NAME_KEY = 'secret_name'
 SECRET_PATH_KEY = 'secret_path'
@@ -10,23 +10,23 @@ SECRET_VALUE_KEY = 'value'
 VAULT_SERVER_USERS = {}
 
 
-BACKBONE_VAULT_SERVER_APIKEY_HEADER = get_env_var('BACKBONE_VAULT_SERVER_APIKEY_HEADER', 'x-api-key')
-BACKBONE_VAULT_SERVER_USER_HEADER = 'x-backbone-vault-user'
+QUICKBE_VAULT_SERVER_APIKEY_HEADER = get_env_var('QUICKBE_VAULT_SERVER_APIKEY_HEADER', 'x-api-key')
+QUICKBE_VAULT_SERVER_USER_HEADER = 'x-quickbe-vault-user'
 
 
 def check_api_key(session: HttpSession) -> int:
-    if BACKBONE_VAULT_SERVER_APIKEY_HEADER in session.request.headers:
-        apikey = session.request.headers.get(BACKBONE_VAULT_SERVER_APIKEY_HEADER)
+    if QUICKBE_VAULT_SERVER_APIKEY_HEADER in session.request.headers:
+        apikey = session.request.headers.get(QUICKBE_VAULT_SERVER_APIKEY_HEADER)
         user_name = VAULT_SERVER_USERS.get(apikey)
         if user_name is not None:
-            session.response.headers[BACKBONE_VAULT_SERVER_USER_HEADER] = user_name
+            session.response.headers[QUICKBE_VAULT_SERVER_USER_HEADER] = user_name
             return 200
     session.response.response = 'Unauthorized'
     return 401
 
 
 def _get_user(session: HttpSession) -> str:
-    return session.response.headers[BACKBONE_VAULT_SERVER_USER_HEADER]
+    return session.response.headers[QUICKBE_VAULT_SERVER_USER_HEADER]
 
 
 def _is_authorized_to_path(session: HttpSession, secret_path: str) -> bool:

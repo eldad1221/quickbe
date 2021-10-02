@@ -5,11 +5,11 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 setuptools.setup(
-    name="backbone",
+    name="quickbe",
     version="0.0.1",
     author="Eldad Bishari",
     author_email="eldad@1221tlv.org",
-    description="Backbone infrastructure",
+    description="Quick and simple back-end infrastructure",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/eldad1221/backbone",

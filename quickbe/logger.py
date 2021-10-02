@@ -15,8 +15,8 @@ default_log_file_name = f"{datetime.now().replace(microsecond=0)}_{PROCESS_LOG_I
 FORMAT = '%(asctime)s > %(levelname)s\t%(message)s'
 formatter = logging.Formatter(FORMAT)
 
-BACKBONE_LOG_TO_STDOUT = os.getenv('BACKBONE_LOG_TO_STDOUT', 'True')
-if BACKBONE_LOG_TO_STDOUT.upper() in ['TRUE', '1', 'YES']:
+QUICKBE_LOG_TO_STDOUT = os.getenv('QUICKBE_LOG_TO_STDOUT', 'True')
+if QUICKBE_LOG_TO_STDOUT.upper() in ['TRUE', '1', 'YES']:
     stdout_handler = logging.StreamHandler()
     stdout_handler.setFormatter(formatter)
     _root.addHandler(stdout_handler)

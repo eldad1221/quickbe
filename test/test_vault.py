@@ -3,8 +3,8 @@ import datetime
 import unittest
 import uuid
 
-from backbone import Log
-import backbone.vault as vault
+from quickbe import Log
+import quickbe.vault as vault
 
 
 class CryptoTestCase(unittest.TestCase):
@@ -46,7 +46,8 @@ class CryptoTestCase(unittest.TestCase):
         vault.save_secret(
             secret_name=secret_name,
             value=original_data,
-            secret_path=secret_path
+            secret_path=secret_path,
+            comment='Unit testing secret'
         )
 
         value = vault.read_secret(secret_name=secret_name, secret_path=secret_path)

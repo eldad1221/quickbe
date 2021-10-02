@@ -12,7 +12,7 @@ setuptools.setup(
     description="Quick and simple back-end infrastructure",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/eldad1221/backbone",
+    url="https://github.com/eldad1221/quickbe",
     packages=setuptools.find_packages(),
     install_requires=[
         'flask',

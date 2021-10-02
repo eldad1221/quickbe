@@ -3,3 +3,4 @@ waitress
 cerberus
 cryptography
 GitPython
+waitress==2.0.0

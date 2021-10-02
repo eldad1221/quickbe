@@ -1,4 +1,5 @@
 import uuid
+import git
 import datetime
 import unittest
 from os.path import join
@@ -28,6 +29,19 @@ class GitTestCase(unittest.TestCase):
         repo.index.add(items=files_to_add)
         repo.index.commit(message=f'Unittest {datetime.datetime.now()}')
         self.assertGreater(len(files_to_add), 0)
+
+    def test_push(self):
+        remote_url = 'https://piponly-at-664994556922:YwiwUvu4WV80tniQnaG1k+8e1NX2oNMcMCBi1mXDa7w=@git-codecommit.us-east-1.amazonaws.com/v1/repos/vault-a'
+        name = 'origin'
+
+        repo = vault.get_repo()
+
+        try:
+            origin = repo.remote(name=name)
+        except ValueError:
+            origin = repo.create_remote(name=name, url=remote_url)
+        origin.pull()
+        origin.push()
 
 
 if __name__ == '__main__':

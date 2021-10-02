@@ -53,6 +53,32 @@ class CryptoTestCase(unittest.TestCase):
 
         self.assertEqual(value, original_data)
 
+    def test_list_secrets(self):
+        secret_path = 'testing'
+        secrets = vault.list_secret(secret_path=secret_path)
+        Log.debug(secrets)
+        self.assertIsInstance(secrets, list)
+
+    def test_get_secrets(self):
+        vault.load_all_keys()
+        secret_path = 'testing'
+        secrets = vault.get_secrets(secret_path=secret_path)
+        Log.debug(secrets)
+        self.assertIsInstance(secrets, dict)
+
+    def test_path_auth(self):
+        path = '/testing/unittests'
+        test_cases = {
+            'admin': True,
+            'developer': True,
+            'guest': False
+        }
+
+        for user, expected_result in test_cases.items():
+            is_authorized = vault.is_authorized_to_path(user=user, secret_path=path)
+            Log.debug(f'User {user} got {is_authorized}')
+            self.assertEqual(expected_result, is_authorized)
+
 
 if __name__ == '__main__':
     unittest.main()

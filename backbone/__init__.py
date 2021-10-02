@@ -1,18 +1,38 @@
+import os
 import uuid
+from waitress import serve
 from datetime import datetime
 from cerberus import Validator
-from flask import Flask, request
+from inspect import getfullargspec
+from flask.wrappers import Response, Request
+from flask import Flask, request, make_response
 import backbone.logger as b_logger
+
+
+def get_env_var(key: str, default: str = None) -> str:
+    return os.getenv(key=key, default=default)
+
+
+def get_env_var_as_int(key: str, default: int = 0) -> int:
+    value = get_env_var(key=key)
+    try:
+        default = int(default)
+        value = int(float(value))
+    except TypeError:
+        value = default
+    return value
+
 
 WEB_SERVER_ENDPOINTS = {}
 WEB_SERVER_ENDPOINTS_VALIDATIONS = {}
+BACKBONE_WAITRESS_THREADS = get_env_var_as_int('BACKBONE_WAITRESS_THREADS', 10)
 
 
 def _endpoint_function(path: str):
     if path in WEB_SERVER_ENDPOINTS:
         return WEB_SERVER_ENDPOINTS.get(path)
     else:
-        raise NotImplemented(f'No implementation for path {path}.')
+        raise NotImplementedError(f'No implementation for path /{path}.')
 
 
 def _endpoint_validator(path: str) -> Validator:
@@ -31,25 +51,64 @@ def endpoint(path: str = None, validation: dict = None):
             web_path = str(func.__qualname__).lower().replace('.', '/')
         else:
             web_path = path
-        Log.debug(f'Registering endpoint: Path={web_path}, Function={func}')
-        WEB_SERVER_ENDPOINTS[web_path] = func
-        if isinstance(validation, dict):
-            validator = Validator(validation)
-            validator.allow_unknown = True
-            WEB_SERVER_ENDPOINTS_VALIDATIONS[web_path] = validator
-        return func
+        if _is_valid_http_handler(func=func):
+            Log.debug(f'Registering endpoint: Path={web_path}, Function={func.__qualname__}')
+            if web_path in WEB_SERVER_ENDPOINTS:
+                raise FileExistsError(f'Endpoint {web_path} already exists.')
+            WEB_SERVER_ENDPOINTS[web_path] = func
+            if isinstance(validation, dict):
+                validator = Validator(validation)
+                validator.allow_unknown = True
+                WEB_SERVER_ENDPOINTS_VALIDATIONS[web_path] = validator
+            return func
 
     return decorator
 
 
+def _is_valid_http_handler(func) -> bool:
+    args_spec = getfullargspec(func=func)
+    try:
+        args_spec.annotations.pop('return')
+    except KeyError:
+        pass
+    arg_types = args_spec.annotations.values()
+    if len(arg_types) == 1 and HttpSession in arg_types:
+        return True
+    else:
+        error_msg = f'Function {func.__qualname__} needs one argument, type ' \
+                    f'{HttpSession.__qualname__}.Got spec: {args_spec}'
+        Log.error(error_msg)
+        raise TypeError(error_msg)
+
+
+class HttpSession:
+
+    def __init__(self, req: Request, resp: Response):
+        self._request = req
+        self._response = resp
+
+    @property
+    def request(self) -> Request:
+        return self._request
+
+    @property
+    def response(self) -> Response:
+        return self._response
+
+    def get_parameter(self, name: str):
+        return self.request.json.get(name)
+
+
 class WebServer:
+
+    web_filters = []
 
     app = Flask(__name__)
 
     @staticmethod
     @app.route('/health', methods=['GET'])
     def health():
-        return 'OK'
+        return {'status': 'OK', 'timestamp': f'{datetime.now()}'}
 
     @staticmethod
     @app.route('/favicon.ico', methods=['GET'])
@@ -59,18 +118,52 @@ class WebServer:
     @staticmethod
     @app.route('/<path>', methods=['GET', 'POST'])
     def dynamic_get(path: str):
-        req_body = request.get_json()
+        resp = make_response()
+        session = HttpSession(req=request, resp=resp)
+        session.response.status = 200
+        for web_filter in WebServer.web_filters:
+            http_status = web_filter(session)
+            if http_status != 200:
+                return session.response, http_status
+        req_body = request.json
         if req_body is None:
             req_body = {}
+        req_body.update(request.values)
+        Log.debug(f'Endpoint /{path}: {req_body}')
         validator = _endpoint_validator(path=path)
         if validator is not None:
             if not validator.validate(req_body):
-                return validator.errors
-        return _endpoint_function(path=path)(req_body)
+                return validator.errors, 400
+        try:
+            resp_data = _endpoint_function(path=path)(session)
+            http_status = session.response.status
+            resp_headers = resp.headers
+            if resp_data is None:
+                resp_data = session.response
+            if isinstance(resp_data, dict):
+                resp_headers['Content-Type'] = 'application/json'
+            return resp_data, http_status, resp_headers
+        except NotImplementedError as ex:
+            Log.debug(f'Error: {ex}')
+            return str(ex), 404
+
+    @staticmethod
+    def add_filter(func):
+        """
+        Add a function as a web filter. Function must receive request and return int as http status.
+        If returns 200 the request will be processed otherwise it will stop and return this status
+        :param func:
+        :return:
+        """
+        if hasattr(func, '__call__') and _is_valid_http_handler(func=func):
+            WebServer.web_filters.append(func)
+            Log.info(f'Filter {func.__qualname__} added.')
+        else:
+            raise TypeError(f'Filter is not a function, got {type(func)} instead.')
 
     @staticmethod
     def start():
-        WebServer.app.run(host='0.0.0.0', port=8888)
+        serve(app=WebServer.app, host='0.0.0.0', port=8888, threads=BACKBONE_WAITRESS_THREADS)
 
 
 class Log:

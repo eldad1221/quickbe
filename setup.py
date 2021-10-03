@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="quickbe",
-    version="0.0.2",
+    version="0.0.3",
     author="Eldad Bishari",
     author_email="eldad@1221tlv.org",
     description="Quick and simple back-end infrastructure",
@@ -15,8 +15,9 @@ setuptools.setup(
     url="https://github.com/eldad1221/quickbe",
     packages=setuptools.find_packages(),
     install_requires=[
-        'flask',
-        'waitress',
+        'flask==2.0.1',
+        'cerberus==1.3.4',
+        'waitress==2.0.0',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

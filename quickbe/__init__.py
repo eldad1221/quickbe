@@ -3,10 +3,24 @@ import uuid
 from waitress import serve
 from datetime import datetime
 from cerberus import Validator
+import quickbe.logger as b_logger
 from inspect import getfullargspec
 from flask.wrappers import Response, Request
 from flask import Flask, request, make_response
-import quickbe.logger as b_logger
+
+
+def remove_prefix(s: str, prefix: str) -> str:
+    if s.startswith(prefix):
+        return s.replace(prefix, '', 1)
+    else:
+        return s
+
+
+def remove_suffix(s: str, suffix: str) -> str:
+    if s.endswith(suffix):
+        return s[:(len(suffix)*-1)]
+    else:
+        return s
 
 
 def get_env_var(key: str, default: str = None) -> str:

@@ -2,7 +2,6 @@ import os
 import uuid
 import quickbe
 import unittest
-from quickbe.vault import _remove_suffix
 
 
 class UtilsTestCase(unittest.TestCase):
@@ -37,7 +36,7 @@ class UtilsTestCase(unittest.TestCase):
             'hello world ': 'hello world ',
         }
         for value, expected_val in test_cases.items():
-            self.assertEqual(expected_val, _remove_suffix(s=value, suffix='world'))
+            self.assertEqual(expected_val, quickbe.remove_suffix(s=value, suffix='world'))
 
 
 if __name__ == '__main__':

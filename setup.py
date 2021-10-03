@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="quickbe",
-    version="0.0.3",
+    version="0.0.5",
     author="Eldad Bishari",
     author_email="eldad@1221tlv.org",
     description="Quick and simple back-end infrastructure",

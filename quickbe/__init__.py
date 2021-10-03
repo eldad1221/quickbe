@@ -100,6 +100,11 @@ class HttpSession:
     def __init__(self, req: Request, resp: Response):
         self._request = req
         self._response = resp
+        self._data = {}
+        if req.json is not None:
+            self._data.update(req.json)
+        if req.values is not None:
+            self._data.update(req.values)
 
     @property
     def request(self) -> Request:
@@ -110,7 +115,7 @@ class HttpSession:
         return self._response
 
     def get_parameter(self, name: str):
-        return self.request.json.get(name)
+        return self._data.get(name)
 
 
 class WebServer:
@@ -176,8 +181,8 @@ class WebServer:
             raise TypeError(f'Filter is not a function, got {type(func)} instead.')
 
     @staticmethod
-    def start():
-        serve(app=WebServer.app, host='0.0.0.0', port=8888, threads=QUICKBE_WAITRESS_THREADS)
+    def start(host: str = '0.0.0.0', port: int = 8888, threads: int = QUICKBE_WAITRESS_THREADS):
+        serve(app=WebServer.app, host=host, port=port, threads=threads)
 
 
 class Log:

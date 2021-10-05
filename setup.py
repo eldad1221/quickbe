@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="quickbe",
-    version="0.0.5",
+    version="0.0.6",
     author="Eldad Bishari",
     author_email="eldad@1221tlv.org",
     description="Quick and simple back-end infrastructure",
@@ -18,6 +18,7 @@ setuptools.setup(
         'flask==2.0.1',
         'cerberus==1.3.4',
         'waitress==2.0.0',
+        'schedule==1.1.0',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

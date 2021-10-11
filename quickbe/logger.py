@@ -57,6 +57,15 @@ def _object_dump(obj: object) -> str:
     return json.dumps(obj, default=lambda o: o.__dict__, indent=4)
 
 
+def log_exception(message: str):
+    msg = LOG_MESSAGE_FORMAT.format(
+        run_level_source_file(run_level=3),
+        run_level_source_line_number(run_level=3),
+        run_level_method_name(run_level=3), message
+    )
+    logging.exception(msg=msg)
+
+
 def log_msg(level: int, message: object, current_run_level: int = 2) -> None:
     """
     Write a log message.
@@ -73,7 +82,8 @@ def log_msg(level: int, message: object, current_run_level: int = 2) -> None:
         LOG_MESSAGE_FORMAT.format(
             run_level_source_file(run_level=current_run_level),
             run_level_source_line_number(run_level=current_run_level),
-            run_level_method_name(run_level=current_run_level), message)
+            run_level_method_name(run_level=current_run_level), message
+        )
     )
 
 

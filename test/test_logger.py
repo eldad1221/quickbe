@@ -6,6 +6,13 @@ import quickbe.logger as lg
 
 class LoggerTestCase(unittest.TestCase):
 
+    def test_exception_logging(self):
+        try:
+            raise ValueError('Just for testing')
+        except ValueError:
+            quickbe.Log.exception('Message for this fail')
+            self.assertEqual(True, True)
+
     def test_basic_log_message(self):
         lg.log_msg(level=20, message='Test message')
         self.assertEqual(True, True)

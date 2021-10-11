@@ -216,6 +216,12 @@ class Log:
         b_logger.log_msg(level=50, message=msg, current_run_level=3)
 
     @staticmethod
+    def exception(msg: str):
+        b_logger.log_exception(message=msg)
+        # Log._critical_msgs_count += 1
+        # b_logger.log_msg(level=50, message=msg, current_run_level=3)
+
+    @staticmethod
     def warning_count() -> int:
         return Log._warning_msgs_count
 

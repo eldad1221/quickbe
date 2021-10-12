@@ -184,6 +184,13 @@ class WebServer:
         return WebServer._validate_access_key(func=do, access_key=access_key)
 
     @staticmethod
+    @app.route(f'/<access_key>/environ', methods=['GET'])
+    def web_server_get_environ(access_key):
+        def do():
+            return dict(os.environ)
+        return WebServer._validate_access_key(func=do, access_key=access_key)
+
+    @staticmethod
     @app.route(f'/<access_key>/set_log_level/<level>', methods=['GET'])
     def web_server_set_log_level(access_key, level: int):
         def do():

@@ -25,5 +25,4 @@ def goto(session: HttpSession):
 
 
 if __name__ == '__main__':
-    Log.info(f'Starting web server')
     WebServer.start()

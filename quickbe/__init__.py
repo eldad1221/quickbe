@@ -1,10 +1,13 @@
 import os
 import uuid
+from psutil import Process
 from waitress import serve
 from datetime import datetime
 from cerberus import Validator
 import quickbe.logger as b_logger
 from inspect import getfullargspec
+from pkg_resources import working_set
+from quickbe.utils import generate_token
 from flask.wrappers import Response, Request
 from flask import Flask, request, make_response
 
@@ -120,14 +123,73 @@ class HttpSession:
 
 class WebServer:
 
+    ACCESS_KEY = get_env_var('QUICKBE_WEB_SERVER_ACCESS_KEY', generate_token())
+    STOPWATCH_ID = None
+    _requests_stack = []
     web_filters = []
-
     app = Flask(__name__)
+    _process = Process(os.getpid())
+
+    @staticmethod
+    def _register_request():
+        WebServer._requests_stack.append(datetime.now().timestamp())
+        if len(WebServer._requests_stack) > 100:
+            WebServer._requests_stack.pop(0)
+
+    @staticmethod
+    def requests_per_minute() -> float:
+        try:
+            delta = datetime.now().timestamp() - WebServer._requests_stack[0]
+            return len(WebServer._requests_stack) * 60 / delta
+        except Exception:
+            return 0
+
+    @staticmethod
+    def _validate_access_key(func, access_key: str):
+        if access_key == WebServer.ACCESS_KEY:
+            return func()
+        else:
+            return 'Unauthorized', 401
 
     @staticmethod
     @app.route('/health', methods=['GET'])
     def health():
         return {'status': 'OK', 'timestamp': f'{datetime.now()}'}
+
+    @staticmethod
+    @app.route(f'/<access_key>/status', methods=['GET'])
+    def web_server_status(access_key):
+        def do():
+            return {
+                'status': 'OK',
+                'timestamp': f'{datetime.now()}',
+                'log_level': Log.get_log_level_name(),
+                'log_warning_count': Log.warning_count(),
+                'log_error_count': Log.error_count(),
+                'log_critical_count': Log.critical_count(),
+                'memory_utilization': WebServer._process.memory_info().rss/1024**2,
+                'requests_per_minute': WebServer.requests_per_minute(),
+                'uptime_seconds': Log.stopwatch_seconds(stopwatch_id=WebServer.STOPWATCH_ID, print_it=False)
+            }
+        return WebServer._validate_access_key(func=do, access_key=access_key)
+
+    @staticmethod
+    @app.route(f'/<access_key>/info', methods=['GET'])
+    def web_server_info(access_key):
+        def do():
+            return {
+                'endpoints': list(WEB_SERVER_ENDPOINTS.keys()),
+                'packages': sorted([f"{pkg.key}=={pkg.version}" for pkg in working_set]),
+            }
+        return WebServer._validate_access_key(func=do, access_key=access_key)
+
+    @staticmethod
+    @app.route(f'/<access_key>/set_log_level/<level>', methods=['GET'])
+    def web_server_set_log_level(access_key, level: int):
+        def do():
+            Log.set_log_level(level=int(level))
+            return f'Log level is now {Log.get_log_level_name()}', 200
+        return WebServer._validate_access_key(func=do, access_key=access_key)
 
     @staticmethod
     @app.route('/favicon.ico', methods=['GET'])
@@ -137,6 +199,7 @@ class WebServer:
     @staticmethod
     @app.route('/<path>', methods=['GET', 'POST'])
     def dynamic_get(path: str):
+        WebServer._register_request()
         resp = make_response()
         session = HttpSession(req=request, resp=resp)
         session.response.status = 200
@@ -182,6 +245,8 @@ class WebServer:
 
     @staticmethod
     def start(host: str = '0.0.0.0', port: int = 8888, threads: int = QUICKBE_WAITRESS_THREADS):
+        WebServer.STOPWATCH_ID = Log.start_stopwatch('Quickbe web server is starting...', print_it=True)
+        Log.info(f'Server access key: {WebServer.ACCESS_KEY}')
         serve(app=WebServer.app, host=host, port=port, threads=threads)
 
 
@@ -191,6 +256,18 @@ class Log:
     _warning_msgs_count = 0
     _error_msgs_count = 0
     _critical_msgs_count = 0
+
+    @staticmethod
+    def set_log_level(level: int):
+        b_logger.set_log_level(level=level)
+
+    @staticmethod
+    def get_log_level() -> int:
+        return b_logger.get_log_level()
+
+    @staticmethod
+    def get_log_level_name() -> str:
+        return b_logger.get_log_level_name()
 
     @staticmethod
     def debug(msg: str):

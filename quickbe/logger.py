@@ -87,3 +87,13 @@ def log_msg(level: int, message: object, current_run_level: int = 2) -> None:
     )
 
 
+def set_log_level(level: int):
+    _root.setLevel(level=level)
+
+
+def get_log_level() -> int:
+    return _root.level
+
+
+def get_log_level_name() -> str:
+    return logging.getLevelName(get_log_level())

@@ -1,5 +1,13 @@
+import random
+import string
 import schedule
 from threading import Thread, Event
+
+
+def generate_token(chars: str = None, length: int = 32) -> str:
+    if chars is None:
+        chars = string.ascii_letters + string.digits
+    return ''.join(random.choice(chars) for _ in range(length))
 
 
 def get_schedule_job(scd_str: str) -> schedule.Job:

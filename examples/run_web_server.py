@@ -4,7 +4,12 @@ from quickbe import WebServer, HttpSession, endpoint, Log
 
 @endpoint(path='hi')
 def say_hello(session: HttpSession):
-    return 'Hello'
+    Log.debug(f'Request headers: {session.request_headers}')
+    Log.debug(f'Query string: {session.request.query_string}')
+    name = session.get_parameter('name')
+    if name is None:
+        name = ''
+    return f'Hello to you {name}'
 
 
 @endpoint(validation={
@@ -25,4 +30,4 @@ def goto(session: HttpSession):
 
 
 if __name__ == '__main__':
-    WebServer.start()
+    WebServer.start(port=888)

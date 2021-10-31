@@ -1,7 +1,6 @@
 import os
 import uuid
 from psutil import Process
-from waitress import serve
 from datetime import datetime
 from cerberus import Validator
 import quickbe.logger as b_logger
@@ -10,6 +9,7 @@ from pkg_resources import working_set
 from quickbe.utils import generate_token
 from flask.wrappers import Response, Request
 from flask import Flask, request, make_response
+from werkzeug.wrappers.response import Response as WerkzeugResponse
 
 
 def remove_prefix(s: str, prefix: str) -> str:
@@ -110,6 +110,10 @@ class HttpSession:
             self._data.update(req.values)
 
     @property
+    def request_headers(self) -> dict:
+        return self._request.headers
+
+    @property
     def request(self) -> Request:
         return self._request
 
@@ -117,8 +121,14 @@ class HttpSession:
     def response(self) -> Response:
         return self._response
 
-    def get_parameter(self, name: str):
-        return self._data.get(name)
+    def get_parameter(self, name: str, default: str = None):
+        if name in self._data:
+            return self._data.get(name)
+        else:
+            return default
+
+    def set_status(self, status: int):
+        self.response.status = status
 
 
 class WebServer:
@@ -154,7 +164,22 @@ class WebServer:
     @staticmethod
     @app.route('/health', methods=['GET'])
     def health():
-        return {'status': 'OK', 'timestamp': f'{datetime.now()}'}
+        """
+        Health check endpoint
+        :return:
+        Return 'OK' and time stamp to ensure that response is not cached by any proxy.
+        {"status":"OK","timestamp":"2021-10-24 15:06:37.746497"}
+
+        You may pass HTTP parameter `echo` and it will include it in the response.
+        {"echo":"Testing","status":"OK","timestamp":"2021-10-24 15:03:45.830066"}
+        """
+        data = {'status': 'OK', 'timestamp': f'{datetime.now()}'}
+        try:
+            echo_text = request.args['echo']
+            data['echo'] = echo_text
+        except Exception:
+            pass
+        return data
 
     @staticmethod
     @app.route(f'/<access_key>/status', methods=['GET'])
@@ -212,6 +237,8 @@ class WebServer:
         session.response.status = 200
         for web_filter in WebServer.web_filters:
             http_status = web_filter(session)
+            if isinstance(http_status, (Request, WerkzeugResponse)):
+                return http_status
             if http_status != 200:
                 return session.response, http_status
         req_body = request.json
@@ -251,10 +278,10 @@ class WebServer:
             raise TypeError(f'Filter is not a function, got {type(func)} instead.')
 
     @staticmethod
-    def start(host: str = '0.0.0.0', port: int = 8888, threads: int = QUICKBE_WAITRESS_THREADS):
+    def start(host: str = '0.0.0.0', port: int = 8888):
         WebServer.STOPWATCH_ID = Log.start_stopwatch('Quickbe web server is starting...', print_it=True)
         Log.info(f'Server access key: {WebServer.ACCESS_KEY}')
-        serve(app=WebServer.app, host=host, port=port, threads=threads)
+        WebServer.app.run(host=host, port=port)
 
 
 class Log:

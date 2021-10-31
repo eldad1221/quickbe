@@ -1,7 +1,26 @@
+import os
 import random
 import string
 import schedule
 from threading import Thread, Event
+
+
+def load_env(file_path: str = None):
+    if file_path is None:
+        file_path = '.env'
+    try:
+        f = open(file_path, 'r')
+        lines = f.readlines()
+        f.close()
+        for line in lines:
+            if line.strip().startswith('#'):
+                continue
+            tokens = line.split('=', 1)
+            if len(tokens) == 2:
+                os.environ[tokens[0].strip().upper()] = tokens[1].strip()
+
+    except FileNotFoundError:
+        pass
 
 
 def generate_token(chars: str = None, length: int = 32) -> str:

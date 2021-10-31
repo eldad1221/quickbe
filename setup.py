@@ -17,7 +17,6 @@ setuptools.setup(
     install_requires=[
         'flask==2.0.1',
         'cerberus==1.3.4',
-        'waitress==2.0.0',
         'schedule==1.1.0',
         'psutil==5.8.0',
     ],

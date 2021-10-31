@@ -7,6 +7,12 @@ import quickbe.utils as ut
 
 class UtilsTestCase(unittest.TestCase):
 
+    def test_load_env(self):
+        var_name = 'VARIABLE_FOR_UNITTEST'
+        self.assertEqual(False, var_name in os.environ)
+        ut.load_env(file_path='../.env')
+        self.assertEqual(os.getenv(var_name), 'abc123')
+
     def test_get_env_var(self):
         test_cases = {
             'Hello': 'Hello',

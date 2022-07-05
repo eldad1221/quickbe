@@ -3,7 +3,7 @@ import pathlib
 import datetime
 import requests
 from cachetools import TTLCache
-from quickbe.utils import load_env
+from dotenv import load_dotenv
 from google.oauth2 import id_token
 from pip._vendor import cachecontrol
 import google.auth.transport.requests
@@ -13,7 +13,7 @@ from flask import abort, redirect, request
 from quickbe import WebServer, HttpSession, endpoint, Log, get_env_var
 
 
-load_env(file_path='../.env')
+load_dotenv()
 
 GOOGLE_CLIENT_ID = get_env_var('GOOGLE_CLIENT_ID')
 USER_SESSION_TIMEOUT = 900
@@ -61,6 +61,7 @@ def login():
 
 @endpoint(path='logout')
 def logout(h_session: HttpSession):
+    # TODO Get token key to pop
     users_session_token.pop()
     h_session.set_status(302)
     return redirect("/health")

@@ -1,7 +1,7 @@
 import time
 import schedule
 import unittest
-from quickbe import Log
+from quickbelog import Log
 from quickbe.utils import get_schedule_job, ScheduledJobs
 
 JOB_DEF = [

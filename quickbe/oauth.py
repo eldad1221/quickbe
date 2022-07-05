@@ -3,7 +3,6 @@ import pathlib
 import datetime
 import requests
 from cachetools import TTLCache
-from quickbe.utils import load_env
 from google.oauth2 import id_token
 from pip._vendor import cachecontrol
 import google.auth.transport.requests

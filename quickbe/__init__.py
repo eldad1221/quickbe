@@ -1,9 +1,8 @@
 import os
-import uuid
+from quickbelog import Log
 from psutil import Process
 from datetime import datetime
 from cerberus import Validator
-import quickbe.logger as b_logger
 from inspect import getfullargspec
 from pkg_resources import working_set
 from quickbe.utils import generate_token
@@ -139,6 +138,7 @@ class WebServer:
     web_filters = []
     app = Flask(__name__)
     _process = Process(os.getpid())
+    Log.info(f'Server access key: {ACCESS_KEY}')
 
     @staticmethod
     def _register_request():
@@ -151,7 +151,7 @@ class WebServer:
         try:
             delta = datetime.now().timestamp() - WebServer._requests_stack[0]
             return len(WebServer._requests_stack) * 60 / delta
-        except Exception:
+        except (ZeroDivisionError, IndexError, ValueError):
             return 0
 
     @staticmethod
@@ -174,11 +174,9 @@ class WebServer:
         {"echo":"Testing","status":"OK","timestamp":"2021-10-24 15:03:45.830066"}
         """
         data = {'status': 'OK', 'timestamp': f'{datetime.now()}'}
-        try:
-            echo_text = request.args['echo']
+        echo_text = request.args.get('echo')
+        if echo_text is not None:
             data['echo'] = echo_text
-        except Exception:
-            pass
         return data
 
     @staticmethod
@@ -280,113 +278,4 @@ class WebServer:
     @staticmethod
     def start(host: str = '0.0.0.0', port: int = 8888):
         WebServer.STOPWATCH_ID = Log.start_stopwatch('Quickbe web server is starting...', print_it=True)
-        Log.info(f'Server access key: {WebServer.ACCESS_KEY}')
         WebServer.app.run(host=host, port=port)
-
-
-class Log:
-
-    _stopwatches = {}
-    _warning_msgs_count = 0
-    _error_msgs_count = 0
-    _critical_msgs_count = 0
-
-    @staticmethod
-    def set_log_level(level: int):
-        b_logger.set_log_level(level=level)
-
-    @staticmethod
-    def get_log_level() -> int:
-        return b_logger.get_log_level()
-
-    @staticmethod
-    def get_log_level_name() -> str:
-        return b_logger.get_log_level_name()
-
-    @staticmethod
-    def debug(msg: str):
-        b_logger.log_msg(level=10, message=msg, current_run_level=3)
-
-    @staticmethod
-    def info(msg: str):
-        b_logger.log_msg(level=20, message=msg, current_run_level=3)
-
-    @staticmethod
-    def warning(msg: str):
-        Log._warning_msgs_count += 1
-        b_logger.log_msg(level=30, message=msg, current_run_level=3)
-
-    @staticmethod
-    def error(msg: str):
-        Log._error_msgs_count += 1
-        b_logger.log_msg(level=40, message=msg, current_run_level=3)
-
-    @staticmethod
-    def critical(msg: str):
-        Log._critical_msgs_count += 1
-        b_logger.log_msg(level=50, message=msg, current_run_level=3)
-
-    @staticmethod
-    def exception(msg: str):
-        b_logger.log_exception(message=msg)
-        # Log._critical_msgs_count += 1
-        # b_logger.log_msg(level=50, message=msg, current_run_level=3)
-
-    @staticmethod
-    def warning_count() -> int:
-        return Log._warning_msgs_count
-
-    @staticmethod
-    def error_count() -> int:
-        return Log._error_msgs_count
-
-    @staticmethod
-    def critical_count() -> int:
-        return Log._critical_msgs_count
-
-    @staticmethod
-    def start_stopwatch(msg: str, print_it: bool = False) -> str:
-        stopwatch_id = str(uuid.uuid4())
-        Log._stopwatches[stopwatch_id] = [datetime.now(), msg]
-        if print_it:
-            b_logger.log_msg(
-                level=10,
-                message=f'Start stopwatch: {msg}\t id={stopwatch_id}',
-                current_run_level=3
-            )
-        return stopwatch_id
-
-    @staticmethod
-    def stopwatch_seconds(stopwatch_id: str, print_it: bool = True) -> float:
-        if stopwatch_id in Log._stopwatches:
-            start_time, msg = Log._stopwatches[stopwatch_id]
-            time_delta = datetime.now() - start_time
-            seconds = time_delta.total_seconds()
-            if print_it:
-                b_logger.log_msg(
-                    level=10,
-                    message=f'{seconds} seconds from start, {Log._stopwatches[stopwatch_id][1]}.',
-                    current_run_level=3
-                )
-            return seconds
-        else:
-            return -1
-
-    @staticmethod
-    def stop_stopwatch(stopwatch_id: str, print_it: bool = False) -> bool:
-        if stopwatch_id in Log._stopwatches:
-            start_time, msg = Log._stopwatches[stopwatch_id]
-            if print_it:
-                seconds = Log.stopwatch_seconds(stopwatch_id=stopwatch_id, print_it=False)
-                b_logger.log_msg(
-                    level=10,
-                    message=f'{msg} took {seconds} seconds.',
-                    current_run_level=3
-                )
-            try:
-                del Log._stopwatches[stopwatch_id]
-            except KeyError:
-                pass
-            return True
-        else:
-            return False

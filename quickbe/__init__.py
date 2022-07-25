@@ -180,7 +180,7 @@ class WebServer:
         return data
 
     @staticmethod
-    @app.route(f'/<access_key>/status', methods=['GET'])
+    @app.route(f'/<access_key>/quickbe-server-status', methods=['GET'])
     def web_server_status(access_key):
         def do():
             return {
@@ -197,7 +197,7 @@ class WebServer:
         return WebServer._validate_access_key(func=do, access_key=access_key)
 
     @staticmethod
-    @app.route(f'/<access_key>/info', methods=['GET'])
+    @app.route(f'/<access_key>/quickbe-server-info', methods=['GET'])
     def web_server_info(access_key):
         def do():
             return {
@@ -207,7 +207,7 @@ class WebServer:
         return WebServer._validate_access_key(func=do, access_key=access_key)
 
     @staticmethod
-    @app.route(f'/<access_key>/environ', methods=['GET'])
+    @app.route(f'/<access_key>/quickbe-server-environ', methods=['GET'])
     def web_server_get_environ(access_key):
         def do():
             return dict(os.environ)
@@ -220,11 +220,6 @@ class WebServer:
             Log.set_log_level(level=int(level))
             return f'Log level is now {Log.get_log_level_name()}', 200
         return WebServer._validate_access_key(func=do, access_key=access_key)
-
-    @staticmethod
-    @app.route('/favicon.ico', methods=['GET'])
-    def favicon():
-        return ''
 
     @staticmethod
     @app.route('/<path>', methods=['GET', 'POST'])

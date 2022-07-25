@@ -30,4 +30,4 @@ def goto(session: HttpSession):
 
 
 if __name__ == '__main__':
-    WebServer.start(port=888)
+    WebServer.start(port=8888)

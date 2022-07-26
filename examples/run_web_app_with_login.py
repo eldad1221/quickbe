@@ -8,14 +8,13 @@ from google.oauth2 import id_token
 from pip._vendor import cachecontrol
 import google.auth.transport.requests
 from quickbe.oauth import get_authorization_flow
-from google_auth_oauthlib.flow import Flow
-from flask import abort, redirect, request
+from flask import redirect, request
 from quickbe import WebServer, HttpSession, endpoint, Log, get_env_var
 
 
 load_dotenv()
 
-GOOGLE_CLIENT_ID = get_env_var('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 USER_SESSION_TIMEOUT = 900
 USER_TOKEN_KEY = 'user-token'
 
@@ -31,7 +30,7 @@ client_secrets_file = os.path.join(pathlib.Path(__file__).parent, "client_secret
 
 AUTHORIZATION_FLOW = get_authorization_flow()
 
-WebServer.app.secret_key = get_env_var("APP_SECRET_KEY")
+WebServer.app.secret_key = os.getenv("APP_SECRET_KEY")
 Log.info(f'App secret key: {WebServer.app.secret_key}')
 users_session_token = TTLCache(maxsize=1000, ttl=USER_SESSION_TIMEOUT)
 

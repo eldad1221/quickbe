@@ -25,12 +25,8 @@ def remove_suffix(s: str, suffix: str) -> str:
         return s
 
 
-def get_env_var(key: str, default: str = None) -> str:
-    return os.getenv(key=key, default=default)
-
-
 def get_env_var_as_int(key: str, default: int = 0) -> int:
-    value = get_env_var(key=key)
+    value = os.getenv(key=key)
     try:
         default = int(default)
         value = int(float(value))
@@ -132,7 +128,7 @@ class HttpSession:
 
 class WebServer:
 
-    ACCESS_KEY = get_env_var('QUICKBE_WEB_SERVER_ACCESS_KEY', generate_token())
+    ACCESS_KEY = os.getenv('QUICKBE_WEB_SERVER_ACCESS_KEY', generate_token())
     STOPWATCH_ID = None
     _requests_stack = []
     web_filters = []

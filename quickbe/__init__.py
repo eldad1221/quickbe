@@ -2,79 +2,20 @@ import os
 from quickbelog import Log
 from psutil import Process
 from datetime import datetime
-from cerberus import Validator
 from inspect import getfullargspec
 from pkg_resources import working_set
 from quickbe.utils import generate_token
-from flask.wrappers import Response, Request
-from flask import Flask, request, make_response
-from werkzeug.wrappers.response import Response as WerkzeugResponse
+import quickbeserverless as qb_serverless
+from flask import Flask, request
 
 
-def remove_prefix(s: str, prefix: str) -> str:
-    if s.startswith(prefix):
-        return s.replace(prefix, '', 1)
-    else:
-        return s
-
-
-def remove_suffix(s: str, suffix: str) -> str:
-    if s.endswith(suffix):
-        return s[:(len(suffix)*-1)]
-    else:
-        return s
-
-
-def get_env_var_as_int(key: str, default: int = 0) -> int:
-    value = os.getenv(key=key)
-    try:
-        default = int(default)
-        value = int(float(value))
-    except TypeError:
-        value = default
-    return value
-
-
-WEB_SERVER_ENDPOINTS = {}
-WEB_SERVER_ENDPOINTS_VALIDATIONS = {}
-QUICKBE_WAITRESS_THREADS = get_env_var_as_int('QUICKBE_WAITRESS_THREADS', 10)
-
-
-def _endpoint_function(path: str):
-    if path in WEB_SERVER_ENDPOINTS:
-        return WEB_SERVER_ENDPOINTS.get(path)
-    else:
-        raise NotImplementedError(f'No implementation for path /{path}.')
-
-
-def _endpoint_validator(path: str) -> Validator:
-    if path in WEB_SERVER_ENDPOINTS_VALIDATIONS:
-        return WEB_SERVER_ENDPOINTS_VALIDATIONS.get(path)
-    else:
-        return None
+class HttpSession(qb_serverless.HttpSession):
+    pass
 
 
 def endpoint(path: str = None, validation: dict = None):
 
-    def decorator(func):
-        global WEB_SERVER_ENDPOINTS
-        global WEB_SERVER_ENDPOINTS_VALIDATIONS
-        if path is None:
-            web_path = str(func.__qualname__).lower().replace('.', '/')
-        else:
-            web_path = path
-        if _is_valid_http_handler(func=func):
-            Log.debug(f'Registering endpoint: Path={web_path}, Function={func.__qualname__}')
-            if web_path in WEB_SERVER_ENDPOINTS:
-                raise FileExistsError(f'Endpoint {web_path} already exists.')
-            WEB_SERVER_ENDPOINTS[web_path] = func
-            if isinstance(validation, dict):
-                validator = Validator(validation)
-                validator.allow_unknown = True
-                WEB_SERVER_ENDPOINTS_VALIDATIONS[web_path] = validator
-            return func
-
-    return decorator
+    return qb_serverless.endpoint(path=path, validation=validation)
 
 
 def _is_valid_http_handler(func) -> bool:
@@ -93,37 +34,9 @@ def _is_valid_http_handler(func) -> bool:
         raise TypeError(error_msg)
 
 
-class HttpSession:
-
-    def __init__(self, req: Request, resp: Response):
-        self._request = req
-        self._response = resp
-        self._data = {}
-        if req.json is not None:
-            self._data.update(req.json)
-        if req.values is not None:
-            self._data.update(req.values)
-
-    @property
-    def request_headers(self) -> dict:
-        return self._request.headers
-
-    @property
-    def request(self) -> Request:
-        return self._request
-
-    @property
-    def response(self) -> Response:
-        return self._response
-
-    def get_parameter(self, name: str, default: str = None):
-        if name in self._data:
-            return self._data.get(name)
-        else:
-            return default
-
-    def set_status(self, status: int):
-        self.response.status = status
+EVENT_BODY_KEY = 'body'
+EVENT_HEADERS_KEY = 'headers'
+EVENT_QUERY_STRING_KEY = 'queryStringParameters'
 
 
 class WebServer:
@@ -197,7 +110,7 @@ class WebServer:
     def web_server_info(access_key):
         def do():
             return {
-                'endpoints': list(WEB_SERVER_ENDPOINTS.keys()),
+                'endpoints': list(qb_serverless.WEB_SERVER_ENDPOINTS.keys()),
                 'packages': sorted([f"{pkg.key}=={pkg.version}" for pkg in working_set]),
             }
         return WebServer._validate_access_key(func=do, access_key=access_key)
@@ -221,36 +134,18 @@ class WebServer:
     @app.route('/<path>', methods=['GET', 'POST'])
     def dynamic_get(path: str):
         WebServer._register_request()
-        resp = make_response()
-        session = HttpSession(req=request, resp=resp)
-        session.response.status = 200
+        session = HttpSession(body=request.json, parameters=request.args, headers=request.headers)
         for web_filter in WebServer.web_filters:
             http_status = web_filter(session)
-            if isinstance(http_status, (Request, WerkzeugResponse)):
-                return http_status
             if http_status != 200:
-                return session.response, http_status
-        req_body = request.json
-        if req_body is None:
-            req_body = {}
-        req_body.update(request.values)
-        Log.debug(f'Endpoint /{path}: {req_body}')
-        validator = _endpoint_validator(path=path)
-        if validator is not None:
-            if not validator.validate(req_body):
-                return validator.errors, 400
-        try:
-            resp_data = _endpoint_function(path=path)(session)
-            http_status = session.response.status
-            resp_headers = resp.headers
-            if resp_data is None:
-                resp_data = session.response
-            if isinstance(resp_data, dict):
-                resp_headers['Content-Type'] = 'application/json'
-            return resp_data, http_status, resp_headers
-        except NotImplementedError as ex:
-            Log.debug(f'Error: {ex}')
-            return str(ex), 404
+                return 'Error', http_status
+        response_body, response_headers, status_code = qb_serverless.execute_endpoint(
+            path=path,
+            body=request.json,
+            parameters=request.args,
+            headers=request.headers
+        )
+        return response_body, status_code, response_headers
 
     @staticmethod
     def add_filter(func):

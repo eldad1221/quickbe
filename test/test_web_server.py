@@ -3,11 +3,11 @@ import quickbe
 
 
 def demo_1(session: quickbe.HttpSession):
-    return session.get_parameter('text')
+    return session.get('text')
 
 
 def demo_2(session: quickbe.HttpSession, s: str):
-    return session.get_parameter('text')
+    return session.get('text')
 
 
 def demo_3(session: str):

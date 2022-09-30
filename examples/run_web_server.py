@@ -1,12 +1,11 @@
 from flask import redirect
-from quickbe import WebServer, HttpSession, endpoint, Log
+from quickbe import WebServer, endpoint, Log
+from quickbeserverless import HttpSession
 
 
 @endpoint(path='hi')
 def say_hello(session: HttpSession):
-    Log.debug(f'Request headers: {session.request_headers}')
-    Log.debug(f'Query string: {session.request.query_string}')
-    name = session.get_parameter('name')
+    name = session.get('name')
     if name is None:
         name = ''
     return f'Hello to you {name}'

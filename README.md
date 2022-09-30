@@ -15,6 +15,16 @@ Every SaaS application needs these components
 It has a strong community, it is fast to learn, it has lots of tools to process and analyze data ... and data is a major key for building a good app :-)
 
 # Web server
+Develop your endpoint as functions with annotations for routing and validation.
+        
+    @endpoint(path='hello', validation={'name': {'type': 'string', 'required': True}})
+    def say_hello(session: HttpSession):
+        name = session.get_parameter('name')
+        if name is None:
+            name = ''
+        return f'Hello {name}'
+
+Run them using Flask or as AWS Lambda function without any changes to your code.
 
 ## Build in endpoints
 * `/health` - Returns 200 if every thing is OK (e.g: `{"status":"OK","timestamp":"2022-07-25 06:18:54.214674"}`)

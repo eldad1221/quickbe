@@ -2,7 +2,6 @@ import os
 from quickbelog import Log
 from psutil import Process
 from datetime import datetime
-from inspect import getfullargspec
 from pkg_resources import working_set
 from quickbe.utils import generate_token
 import quickbeserverless as qb_serverless
@@ -19,22 +18,6 @@ class HttpSession(qb_serverless.HttpSession):
 def endpoint(path: str = None, validation: dict = None):
 
     return qb_serverless.endpoint(path=path, validation=validation)
-
-
-def _is_valid_http_handler(func) -> bool:
-    args_spec = getfullargspec(func=func)
-    try:
-        args_spec.annotations.pop('return')
-    except KeyError:
-        pass
-    arg_types = args_spec.annotations.values()
-    if len(arg_types) == 1 and HttpSession in arg_types:
-        return True
-    else:
-        error_msg = f'Function {func.__qualname__} needs one argument, type ' \
-                    f'{HttpSession.__qualname__}.Got spec: {args_spec}'
-        Log.error(error_msg)
-        raise TypeError(error_msg)
 
 
 EVENT_BODY_KEY = 'body'
@@ -139,9 +122,9 @@ class WebServer:
         WebServer._register_request()
         session = HttpSession(body=request.json, parameters=request.args, headers=request.headers)
         for web_filter in WebServer.web_filters:
-            http_status = web_filter(session)
-            if http_status != 200:
-                return 'Error', http_status
+            resp = web_filter(session)
+            if session.response_status != 200:
+                return resp, session.response_status
         response_headers = {}
         try:
             response_body, response_headers, status_code = qb_serverless.execute_endpoint(
@@ -166,11 +149,11 @@ class WebServer:
         :param func:
         :return:
         """
-        if hasattr(func, '__call__') and _is_valid_http_handler(func=func):
+        if hasattr(func, '__call__') and qb_serverless.is_valid_http_handler(func=func):
             WebServer.web_filters.append(func)
             Log.info(f'Filter {func.__qualname__} added.')
         else:
-            raise TypeError(f'Filter is not a function, got {type(func)} instead.')
+            raise TypeError(f'Filter is not valid! Got this {type(func)}.')
 
     @staticmethod
     def start(host: str = '0.0.0.0', port: int = 8888):

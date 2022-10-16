@@ -1,6 +1,12 @@
 from flask import redirect
-from quickbe import WebServer, endpoint, Log
-from quickbeserverless import HttpSession
+from quickbe import WebServer, endpoint, Log, HttpSession
+
+
+def persona_non_grata(session: HttpSession):
+    name = session.get('name', '').lower()
+    if name in ['dracula', 'sauron', 'dart', 'molech']:
+        session.set_status(401)
+        return 'You are not welcome here!'
 
 
 @endpoint(path='hi')
@@ -18,15 +24,16 @@ def say_hello(session: HttpSession):
 }
 )
 def echo(session: HttpSession):
-    return session.get_parameter('text')
+    return session.get('text')
 
 
 @endpoint(path='go', validation={'to': {'type': 'string', 'required': True}})
 def goto(session: HttpSession):
-    url = session.get_parameter('to')
+    url = session.get('to')
     Log.debug(f'Redirecting to {url}...')
     return redirect(url, code=302)
 
 
 if __name__ == '__main__':
+    WebServer.add_filter(persona_non_grata)
     WebServer.start(port=8888)

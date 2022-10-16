@@ -5,10 +5,7 @@
 Quickbe is a Python library that enables you to deliver quick back-end components. 
 If you are a technical founder or a developer, use this package to build everything you need to launch and grow high-quality SaaS application.
 Every SaaS application needs these components
-* Micro-services
 * Web-services or APIs
-* Web-hooks receivers
-* Central vault
 
 ## Why Python
 
@@ -16,7 +13,10 @@ It has a strong community, it is fast to learn, it has lots of tools to process 
 
 # Web server
 Develop your endpoint as functions with annotations for routing and validation.
-        
+    
+    from quickbe import endpoint, HttpSession
+
+    
     @endpoint(path='hello', validation={'name': {'type': 'string', 'required': True}})
     def say_hello(session: HttpSession):
         name = session.get_parameter('name')

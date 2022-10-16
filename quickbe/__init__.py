@@ -10,7 +10,10 @@ from flask import Flask, request
 
 
 class HttpSession(qb_serverless.HttpSession):
-    pass
+
+    @staticmethod
+    def dummy_method():
+        Log.debug('Dummy method')
 
 
 def endpoint(path: str = None, validation: dict = None):
@@ -139,12 +142,20 @@ class WebServer:
             http_status = web_filter(session)
             if http_status != 200:
                 return 'Error', http_status
-        response_body, response_headers, status_code = qb_serverless.execute_endpoint(
-            path=path,
-            body=request.json,
-            parameters=request.args,
-            headers=request.headers
-        )
+        response_headers = {}
+        try:
+            response_body, response_headers, status_code = qb_serverless.execute_endpoint(
+                path=path,
+                body=request.json,
+                parameters=request.args,
+                headers=request.headers
+            )
+        except NotImplementedError as e:
+            status_code = 404
+            response_body = f'{e}'
+        except Exception as e:
+            status_code = 500
+            response_body = f'{e}'
         return response_body, status_code, response_headers
 
     @staticmethod

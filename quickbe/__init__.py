@@ -134,7 +134,7 @@ class WebServer:
                 return resp, session.response_status
         response_headers = {}
         try:
-            response_body, response_headers, status_code = qb_serverless.execute_endpointexecute_endpoint_with_session(
+            response_body, response_headers, status_code = qb_serverless.execute_endpoint_with_session(
                 path=path,
                 session=session
             )

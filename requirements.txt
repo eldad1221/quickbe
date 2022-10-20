@@ -3,8 +3,8 @@ schedule==1.1.0
 psutil==5.8.0
 cachetools==4.2.4
 python-dotenv==0.20.0
-quickbelog~=1.1.0
-quickbeserverless~=0.3.0
+quickbelog
+quickbeserverless==1.0.0
 quickbeutils==1.2.1
 requests~=2.27.1
 Werkzeug~=2.0.1

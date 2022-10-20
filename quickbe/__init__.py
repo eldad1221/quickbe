@@ -134,11 +134,9 @@ class WebServer:
                 return resp, session.response_status
         response_headers = {}
         try:
-            response_body, response_headers, status_code = qb_serverless.execute_endpoint(
+            response_body, response_headers, status_code = qb_serverless.execute_endpointexecute_endpoint_with_session(
                 path=path,
-                body=request.json,
-                parameters=request.args,
-                headers=request.headers
+                session=session
             )
         except NotImplementedError as e:
             status_code = 404

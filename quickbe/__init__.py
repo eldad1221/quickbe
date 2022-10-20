@@ -15,7 +15,7 @@ class HttpSession(qb_serverless.HttpSession):
         super().__init__(body=body, parameters=parameters, headers=headers)
 
     @property
-    def user_id(self) -> int:
+    def user_id(self) -> str:
         return self._user_id
 
     def set_user_id(self, user_id: str):

@@ -10,9 +10,16 @@ from flask import Flask, request
 
 class HttpSession(qb_serverless.HttpSession):
 
-    @staticmethod
-    def dummy_method():
-        Log.debug('Dummy method')
+    def __init__(self, body: dict = None, parameters: dict = None, headers: dict = None):
+        self._user_id = None
+        super().__init__(body=body, parameters=parameters, headers=headers)
+
+    @property
+    def user_id(self) -> int:
+        return self._user_id
+
+    def set_user_id(self, user_id: str):
+        self._user_id = user_id
 
 
 def endpoint(path: str = None, validation: dict = None):

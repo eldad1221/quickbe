@@ -30,6 +30,7 @@ def endpoint(path: str = None, validation: dict = None):
 EVENT_BODY_KEY = 'body'
 EVENT_HEADERS_KEY = 'headers'
 EVENT_QUERY_STRING_KEY = 'queryStringParameters'
+QUICKBE_DEV_MODE_KEY = 'QUICKBE_DEV_MODE'
 
 
 class WebServer:
@@ -122,6 +123,57 @@ class WebServer:
             Log.set_log_level(level=int(level))
             return f'Log level is now {Log.get_log_level_name()}', 200
         return WebServer._validate_access_key(func=do, access_key=access_key)
+
+    @staticmethod
+    def _schema_documentation(schema: dict, prefix: str = '') -> str:
+        """
+        Generate documentation by schema
+        :param schema:
+        :param prefix:
+        :return: doc string
+        """
+        html = ''
+        for name, value in schema.items():
+            html += f'<tr><td><b>{prefix}{name}</b>'
+            if value.get('required', False):
+                html += ' *required'
+            html += f'</td> <td>{value.get("type", "string")}</td>'
+            html += f'<td>{value.get("doc", "")}'
+            if 'example' in value:
+                html += f'<br>Example: <b>{value.get("example")}</b>'
+            html += f'</td></tr>'
+            if value.get("type") == 'dict':
+                html += WebServer._schema_documentation(schema=value.get("schema"), prefix=f'{prefix}{name}.')
+        return html
+
+    @staticmethod
+    @app.route(f'/endpoint_doc/<path>', methods=['GET'])
+    def web_server_get_endpoint_doc(path: str):
+        def do():
+            try:
+                validator_schema = qb_serverless.get_endpoint_validator(path=path).root_schema.schema
+                html = f'<html><body><h2>Path: /{path}</h2>'
+                html += '<h3>Parameters</h3>'
+                html += """
+<table cellpadding="10">
+    <tr>
+        <th>Name</td>
+        <th>Type</td>
+        <th>Description</td>
+    </tr>
+                """
+
+                html += WebServer._schema_documentation(schema=validator_schema)
+
+                html += '</table></body></html>'
+                return html, 200
+            except Exception as e:
+                msg = f'Can not generate endpoint documentation, {e.__class__.__name__}: {e}'
+                return msg, 500
+        if os.getenv(QUICKBE_DEV_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes']:
+            return do()
+        else:
+            return 'File not found', 404
 
     @staticmethod
     @app.route('/<path>', methods=['GET', 'POST'])

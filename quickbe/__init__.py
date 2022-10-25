@@ -139,6 +139,14 @@ class WebServer:
                 html += ' *required'
             html += f'</td> <td>{value.get("type", "string")}</td>'
             html += f'<td>{value.get("doc", "")}'
+            if 'default' in value:
+                html += f'<br>Default: <b>{value.get("default")}</b>'
+            if 'allowed' in value:
+                html += f'<br>Allowed: <b>{", ".join([str(item) for item in value.get("allowed")])}</b>'
+            if 'min' in value:
+                html += f'<br>Minimum: <b>{value.get("min")}</b>'
+            if 'max' in value:
+                html += f'<br>Maximum: <b>{value.get("max")}</b>'
             if 'example' in value:
                 html += f'<br>Example: <b>{value.get("example")}</b>'
             html += f'</td></tr>'

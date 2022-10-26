@@ -9,7 +9,7 @@ def persona_non_grata(session: HttpSession):
         return 'You are not welcome here!'
 
 
-@endpoint(path='hi')
+@endpoint(path='hi', doc='Say hello', example='Hello to you')
 def say_hello(session: HttpSession):
     name = session.get('name')
     if name is None:
@@ -36,19 +36,14 @@ def say_hello(session: HttpSession):
         'allow_unknown': False,
         'required': True,
         'schema': {
-            'lat': {'type': 'float', 'required': True},
-            'long': {'type': 'float', 'required': True},
             'name': {'type': 'string', 'required': True},
             'description': {'type': 'string', 'required': True},
-            'quantity': {'type': 'integer', 'default': -1},
-            'lifespan': {'type': 'integer', 'default': -1},
-            'attachments_url': {'type': 'list'},
-            'color': {'type': 'string', 'default': '#4285F4'},
-            'type': {'type': 'string', 'default': 'c0'},
-            'qr_code': {'type': 'boolean', 'default': False},
+            'count': {'type': 'integer', 'default': -1, 'example': 42},
+            'type': {'type': 'string', 'default': 'abc'}
         }
     }
-}
+},
+    doc='Echo text'
 )
 def echo(session: HttpSession):
     return session.get('text')

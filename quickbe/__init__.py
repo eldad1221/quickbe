@@ -1,4 +1,5 @@
 import os
+import json
 from quickbelog import Log
 from psutil import Process
 from datetime import datetime
@@ -22,9 +23,17 @@ class HttpSession(qb_serverless.HttpSession):
         self._user_id = user_id
 
 
-def endpoint(path: str = None, validation: dict = None):
+def endpoint(path: str = None, validation: dict = None, doc: str = None, example=None):
+    """
+    Endpoint decorator
+    :param path: Web path (route) to map
+    :param validation: Validation schema, check this for more info https://docs.python-cerberus.org/en/stable/
+    :param doc: Documentation text
+    :param example: Example for function response
+    :return:
+    """
 
-    return qb_serverless.endpoint(path=path, validation=validation)
+    return qb_serverless.endpoint(path=path, validation=validation, doc=doc, example=example)
 
 
 EVENT_BODY_KEY = 'body'
@@ -155,36 +164,42 @@ class WebServer:
         return html
 
     @staticmethod
-    @app.route(f'/endpoint_doc/<path>', methods=['GET'])
+    @app.route(f'/quickbe-endpoint-doc/<path>', methods=['GET'])
     def web_server_get_endpoint_doc(path: str):
         def do():
             try:
-                validator_schema = qb_serverless.get_endpoint_validator(path=path).root_schema.schema
-                html = f'<html><body><h2>Path: /{path}</h2>'
-                html += '<h3>Parameters</h3>'
-                html += """
-<table cellpadding="10">
-    <tr>
-        <th>Name</td>
-        <th>Type</td>
-        <th>Description</td>
-    </tr>
-                """
+                if path not in qb_serverless.WEB_SERVER_ENDPOINTS:
+                    raise KeyError(f'No implementation for {path}.')
 
-                html += WebServer._schema_documentation(schema=validator_schema)
+                validator_schema = qb_serverless.get_endpoint_validator(path=path)
+                html = f'<html><body><h2>Path: /{path}</h2>{qb_serverless.WEB_SERVER_ENDPOINTS_DOCS.get(path, "")}'
 
-                html += '</table></body></html>'
+                if validator_schema:
+                    html += '<h3>Parameters</h3><table cellpadding="10">' \
+                            '<tr><th>Name</td><th>Type</td><th>Description</td></tr>'
+                    schema = validator_schema.root_schema.schema
+                    html += f'{WebServer._schema_documentation(schema=schema)}</table>'
+
+                if path in qb_serverless.WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES:
+                    example_response = qb_serverless.WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES.get(path)
+                    html += f'<h3>Response</h3><pre>{json.dumps(example_response, indent=4)}</pre>'
+
+                html += '</body></html>'
                 return html, 200
             except Exception as e:
                 msg = f'Can not generate endpoint documentation, {e.__class__.__name__}: {e}'
-                return msg, 500
-        if os.getenv(QUICKBE_DEV_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes']:
-            return do()
-        else:
-            return 'File not found', 404
+                Log.warning(msg=msg)
+                raise e
+        try:
+            if os.getenv(QUICKBE_DEV_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes']:
+                return do()
+        except (AttributeError, KeyError):
+            pass
+        return 'File not found', 404
 
     @staticmethod
-    @app.route('/<path>', methods=['GET', 'POST'])
+    @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+    @app.route('/<path:path>', methods=['GET', 'POST'])
     def dynamic_get(path: str):
         WebServer._register_request()
         session = HttpSession(body=request.json, parameters=request.args, headers=request.headers)
@@ -200,7 +215,7 @@ class WebServer:
             )
         except NotImplementedError as e:
             status_code = 404
-            response_body = f'{e}'
+            response_body = 'File not found'
         except Exception as e:
             status_code = 500
             response_body = f'{e}'

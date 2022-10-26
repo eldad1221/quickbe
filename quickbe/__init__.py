@@ -164,7 +164,7 @@ class WebServer:
         return html
 
     @staticmethod
-    @app.route(f'/quickbe-endpoint-doc/<path>', methods=['GET'])
+    @app.route(f'/quickbe-endpoint-doc/<path:path>', methods=['GET'])
     def web_server_get_endpoint_doc(path: str):
         def do():
             try:

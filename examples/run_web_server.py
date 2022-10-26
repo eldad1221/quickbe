@@ -9,6 +9,11 @@ def persona_non_grata(session: HttpSession):
         return 'You are not welcome here!'
 
 
+@endpoint(path='v1/hi', doc='Say hello', example='Hello to you, from V1')
+def say_hello_v1(session: HttpSession):
+    return f'{say_hello(session=session)}, from V1'
+
+
 @endpoint(path='hi', doc='Say hello', example='Hello to you')
 def say_hello(session: HttpSession):
     name = session.get('name')

@@ -163,8 +163,10 @@ class WebServer:
                 html += WebServer._schema_documentation(schema=value.get("schema"), prefix=f'{prefix}{name}.')
         return html
 
+    ENDPOINT_DOC_PATH = '/quickbe-endpoint-doc/'
+
     @staticmethod
-    @app.route(f'/quickbe-endpoint-doc/<path:path>', methods=['GET'])
+    @app.route(f'{ENDPOINT_DOC_PATH}<path:path>', methods=['GET'])
     def web_server_get_endpoint_doc(path: str):
         def do():
             try:
@@ -190,6 +192,23 @@ class WebServer:
                 msg = f'Can not generate endpoint documentation, {e.__class__.__name__}: {e}'
                 Log.warning(msg=msg)
                 raise e
+        try:
+            if os.getenv(QUICKBE_DEV_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes']:
+                return do()
+        except (AttributeError, KeyError):
+            pass
+        return 'File not found', 404
+
+    @staticmethod
+    @app.route(f'/quickbe-endpoints-index', methods=['GET'])
+    def web_server_get_endpoints_index():
+        def do():
+            html = '<html><title>Endpoints index</title><body><h1>Endpoints Index</h1><div style="margin-left:20px">'
+            for path, doc in qb_serverless.WEB_SERVER_ENDPOINTS_DOCS.items():
+                html += f'<a href="{WebServer.ENDPOINT_DOC_PATH}{path}"><h3>{path}</h3></a>'
+                html += f'{doc}<br>'
+            html += '</div></body></html>'
+            return html, 200
         try:
             if os.getenv(QUICKBE_DEV_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes']:
                 return do()

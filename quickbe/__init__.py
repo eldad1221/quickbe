@@ -3,6 +3,7 @@ import json
 from quickbelog import Log
 from psutil import Process
 from datetime import datetime
+from collections import OrderedDict
 from pkg_resources import working_set
 from quickbe.utils import generate_token
 import quickbeserverless as qb_serverless
@@ -204,7 +205,8 @@ class WebServer:
     def web_server_get_endpoints_index():
         def do():
             html = '<html><title>Endpoints index</title><body><h1>Endpoints Index</h1><div style="margin-left:20px">'
-            for path, doc in qb_serverless.WEB_SERVER_ENDPOINTS_DOCS.items():
+            endpoints_doc = OrderedDict(sorted(qb_serverless.WEB_SERVER_ENDPOINTS_DOCS.items()))
+            for path, doc in endpoints_doc.items():
                 html += f'<a href="{WebServer.ENDPOINT_DOC_PATH}{path}"><h3>{path}</h3></a>'
                 html += f'{doc}<br>'
             html += '</div></body></html>'

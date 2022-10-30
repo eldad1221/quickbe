@@ -1,13 +1,12 @@
 import unittest
-import quickbe
-from quickbeserverless import is_valid_http_handler
+from quickbe import HttpSession, is_valid_http_handler
 
 
-def demo_1(session: quickbe.HttpSession):
+def demo_1(session: HttpSession):
     return session.get('text')
 
 
-def demo_2(session: quickbe.HttpSession, s: str):
+def demo_2(session: HttpSession, s: str):
     return session.get('text')
 
 

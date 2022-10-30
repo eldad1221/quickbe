@@ -1,12 +1,11 @@
 import unittest
 from quickbelog import Log
-from quickbe import endpoint
-from quickbeserverless import aws_lambda_handler, HttpSession
+from quickbe import endpoint, aws_lambda_handler, HttpSession
 
 GREETING = 'Hello'
 
 
-@endpoint(validation={
+@endpoint(path='hello_from_lambda', validation={
     'name': {'required': True, 'type': 'string'}
 }
 )
@@ -20,7 +19,7 @@ class AsLambdaEventTestCase(unittest.TestCase):
         name = 'Suzi'
         expected_result = f'"{GREETING} {name}"'
         test_event = {
-            'path': 'hello',
+            'path': 'hello_from_lambda',
             'body': {
                 'name': name
             }

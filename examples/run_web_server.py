@@ -35,16 +35,15 @@ def say_hello(session: HttpSession):
         'required': False, 'type': 'integer',
         'doc': 'Persons age', 'example': 42
     },
-    'object_info': {
-        'doc': 'Object attributes',
+    'other_info': {
+        'doc': 'Other info for this person',
         'type': 'dict',
         'allow_unknown': False,
         'required': True,
         'schema': {
-            'name': {'type': 'string', 'required': True},
+            'address': {'type': 'string', 'required': True},
             'description': {'type': 'string', 'required': True},
-            'count': {'type': 'integer', 'default': -1, 'example': 42},
-            'type': {'type': 'string', 'default': 'abc'}
+            'zip_code': {'type': 'integer', 'default': -1, 'example': 1234567},
         }
     }
 },

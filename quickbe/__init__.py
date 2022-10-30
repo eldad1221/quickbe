@@ -3,25 +3,39 @@ import json
 from quickbelog import Log
 from psutil import Process
 from datetime import datetime
+from cerberus import Validator
+from flask import Flask, request
+from inspect import getfullargspec
 from collections import OrderedDict
 from pkg_resources import working_set
 from quickbe.utils import generate_token
-import quickbeserverless as qb_serverless
-from flask import Flask, request
+
+WEB_SERVER_ENDPOINTS = {}
+WEB_SERVER_ENDPOINTS_VALIDATIONS = {}
+WEB_SERVER_ENDPOINTS_DOCS = {}
+WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES = {}
 
 
-class HttpSession(qb_serverless.HttpSession):
+def get_endpoint_validator(path: str) -> Validator:
+    if path in WEB_SERVER_ENDPOINTS_VALIDATIONS:
+        return WEB_SERVER_ENDPOINTS_VALIDATIONS.get(path)
+    else:
+        return None
 
-    def __init__(self, body: dict = None, parameters: dict = None, headers: dict = None):
-        self._user_id = None
-        super().__init__(body=body, parameters=parameters, headers=headers)
 
-    @property
-    def user_id(self) -> str:
-        return self._user_id
-
-    def set_user_id(self, user_id: str):
-        self._user_id = user_id
+def is_valid_http_handler(func) -> bool:
+    args_spec = getfullargspec(func=func)
+    try:
+        args_spec.annotations.pop('return')
+    except KeyError:
+        pass
+    arg_types = args_spec.annotations.values()
+    if len(arg_types) == 1 and issubclass(list(arg_types)[0], HttpSession):
+        return True
+    else:
+        raise TypeError(
+            f'Function {func.__qualname__} needs one argument, type {HttpSession.__qualname__}.Got spec: {args_spec}'
+        )
 
 
 def endpoint(path: str = None, validation: dict = None, doc: str = None, example=None):
@@ -34,18 +48,120 @@ def endpoint(path: str = None, validation: dict = None, doc: str = None, example
     :return:
     """
 
-    return qb_serverless.endpoint(path=path, validation=validation, doc=doc, example=example)
+    def decorator(func):
+        global WEB_SERVER_ENDPOINTS
+        global WEB_SERVER_ENDPOINTS_VALIDATIONS
+        global WEB_SERVER_ENDPOINTS_DOCS
+        global WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES
+        if path is None:
+            web_path = str(func.__qualname__).lower().replace('.', '/').strip()
+        else:
+            web_path = path.strip()
+
+        if web_path.startswith('/') and len(web_path) > 0:
+            web_path = web_path[1:]
+
+        if is_valid_http_handler(func=func):
+            Log.debug(f'Registering endpoint: Path={web_path}, Function={func.__qualname__}')
+            if web_path in WEB_SERVER_ENDPOINTS:
+                raise FileExistsError(f'Endpoint {web_path} already exists.')
+
+            WEB_SERVER_ENDPOINTS[web_path] = func
+
+            if isinstance(validation, dict):
+                validator = EndPointValidator(validation, purge_unknown=True)
+                validator.allow_unknown = True
+                WEB_SERVER_ENDPOINTS_VALIDATIONS[web_path] = validator
+
+            if doc is not None:
+                WEB_SERVER_ENDPOINTS_DOCS[web_path] = doc
+
+            if example is not None:
+                WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES[web_path] = example
+            return func
+
+    return decorator
 
 
-EVENT_BODY_KEY = 'body'
-EVENT_HEADERS_KEY = 'headers'
-EVENT_QUERY_STRING_KEY = 'queryStringParameters'
-QUICKBE_DEV_MODE_KEY = 'QUICKBE_DEV_MODE'
+class EndPointValidator(Validator):
+
+    def _validate_doc(self, constraint, field, value):
+        """
+        For documentation text
+        :param constraint:
+        :param field:
+        :param value:
+        :return:
+        """
+        pass
+
+    def _validate_example(self, constraint, field, value):
+        """
+        For example value
+        :param constraint:
+        :param field:
+        :param value:
+        :return:
+        """
+        pass
+
+
+class HttpSession:
+
+    def __init__(self, body: dict = None, parameters: dict = None, headers: dict = None):
+        self._response_status = 200
+        self._response_headers = {}
+        self._user_id = None
+
+        if body is None:
+            body = {}
+        self._data = body
+
+        self._headers = headers
+
+        if parameters is not None and isinstance(parameters, dict):
+            self._data.update(parameters)
+
+    @property
+    def request_headers(self) -> dict:
+        return self._headers
+
+    @property
+    def data(self) -> dict:
+        return self._data
+
+    @property
+    def response_status(self) -> int:
+        return self._response_status
+
+    @property
+    def response_headers(self) -> dict:
+        return self._response_headers
+
+    def get(self, name: str, default=None):
+        return self._data.get(name, default)
+
+    def set_status(self, status: int):
+        self._response_status = status
+
+    def set_response_header(self, key: str, value: str):
+        self._response_headers[key] = value
+
+    @property
+    def user_id(self) -> str:
+        return self._user_id
+
+    def set_user_id(self, user_id: str):
+        self._user_id = user_id
+
+
+QUICKBE_DOCUMENTATION_MODE_KEY = 'QUICKBE_DOCUMENTATION_MODE'
+QUICKBE_WEB_SERVER_ACCESS_KEY = 'QUICKBE_WEB_SERVER_ACCESS_KEY'
 
 
 class WebServer:
 
-    ACCESS_KEY = os.getenv('QUICKBE_WEB_SERVER_ACCESS_KEY', generate_token())
+    ACCESS_KEY = os.getenv(QUICKBE_WEB_SERVER_ACCESS_KEY, generate_token())
     STOPWATCH_ID = None
     _requests_stack = []
     web_filters = []
@@ -58,6 +174,10 @@ class WebServer:
         WebServer._requests_stack.append(datetime.now().timestamp())
         if len(WebServer._requests_stack) > 100:
             WebServer._requests_stack.pop(0)
+
+    @staticmethod
+    def is_documentation_on() -> bool:
+        return os.getenv(QUICKBE_DOCUMENTATION_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes', 'on']
 
     @staticmethod
     def requests_per_minute() -> float:
@@ -114,7 +234,7 @@ class WebServer:
     def web_server_info(access_key):
         def do():
             return {
-                'endpoints': list(qb_serverless.WEB_SERVER_ENDPOINTS.keys()),
+                'endpoints': list(WEB_SERVER_ENDPOINTS.keys()),
                 'packages': sorted([f"{pkg.key}=={pkg.version}" for pkg in working_set]),
             }
         return WebServer._validate_access_key(func=do, access_key=access_key)
@@ -171,11 +291,11 @@ class WebServer:
     def web_server_get_endpoint_doc(path: str):
         def do():
             try:
-                if path not in qb_serverless.WEB_SERVER_ENDPOINTS:
+                if path not in WEB_SERVER_ENDPOINTS:
                     raise KeyError(f'No implementation for {path}.')
 
-                validator_schema = qb_serverless.get_endpoint_validator(path=path)
-                html = f'<html><body><h2>Path: /{path}</h2>{qb_serverless.WEB_SERVER_ENDPOINTS_DOCS.get(path, "")}'
+                validator_schema = get_endpoint_validator(path=path)
+                html = f'<html><body><h2>Path: /{path}</h2>{WEB_SERVER_ENDPOINTS_DOCS.get(path, "")}'
 
                 if validator_schema:
                     html += '<h3>Parameters</h3><table cellpadding="10">' \
@@ -183,8 +303,8 @@ class WebServer:
                     schema = validator_schema.root_schema.schema
                     html += f'{WebServer._schema_documentation(schema=schema)}</table>'
 
-                if path in qb_serverless.WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES:
-                    example_response = qb_serverless.WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES.get(path)
+                if path in WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES:
+                    example_response = WEB_SERVER_ENDPOINTS_EXAMPLE_RESPONSES.get(path)
                     html += f'<h3>Response</h3><pre>{json.dumps(example_response, indent=4)}</pre>'
 
                 html += '</body></html>'
@@ -194,7 +314,7 @@ class WebServer:
                 Log.warning(msg=msg)
                 raise e
         try:
-            if os.getenv(QUICKBE_DEV_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes']:
+            if WebServer.is_documentation_on():
                 return do()
         except (AttributeError, KeyError):
             pass
@@ -205,14 +325,14 @@ class WebServer:
     def web_server_get_endpoints_index():
         def do():
             html = '<html><title>Endpoints index</title><body><h1>Endpoints Index</h1><div style="margin-left:20px">'
-            endpoints_doc = OrderedDict(sorted(qb_serverless.WEB_SERVER_ENDPOINTS_DOCS.items()))
+            endpoints_doc = OrderedDict(sorted(WEB_SERVER_ENDPOINTS_DOCS.items()))
             for path, doc in endpoints_doc.items():
                 html += f'<a href="{WebServer.ENDPOINT_DOC_PATH}{path}"><h3>{path}</h3></a>'
                 html += f'{doc}<br>'
             html += '</div></body></html>'
             return html, 200
         try:
-            if os.getenv(QUICKBE_DEV_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes']:
+            if WebServer.is_documentation_on():
                 return do()
         except (AttributeError, KeyError):
             pass
@@ -230,11 +350,11 @@ class WebServer:
                 return resp, session.response_status
         response_headers = {}
         try:
-            response_body, response_headers, status_code = qb_serverless.execute_endpoint_with_session(
+            response_body, response_headers, status_code = execute_endpoint_with_session(
                 path=path,
                 session=session
             )
-        except NotImplementedError as e:
+        except NotImplementedError:
             status_code = 404
             response_body = 'File not found'
         except Exception as e:
@@ -250,7 +370,7 @@ class WebServer:
         :param func:
         :return:
         """
-        if hasattr(func, '__call__') and qb_serverless.is_valid_http_handler(func=func):
+        if hasattr(func, '__call__') and is_valid_http_handler(func=func):
             WebServer.web_filters.append(func)
             Log.info(f'Filter {func.__qualname__} added.')
         else:
@@ -260,3 +380,86 @@ class WebServer:
     def start(host: str = '0.0.0.0', port: int = 8888):
         WebServer.STOPWATCH_ID = Log.start_stopwatch('Quickbe web server is starting...', print_it=True)
         WebServer.app.run(host=host, port=port)
+
+
+def _endpoint_function(path: str):
+    if path.startswith('/') and len(path) > 0:
+        path = path[1:]
+    if path in WEB_SERVER_ENDPOINTS:
+        return WEB_SERVER_ENDPOINTS.get(path)
+    else:
+        raise NotImplementedError(f'No implementation for path /{path}.')
+
+
+def execute_endpoint(path: str, headers: dict, body: dict, parameters: dict) -> (dict, dict, int):
+
+    session = HttpSession(
+        body=body,
+        parameters=parameters,
+        headers=headers
+    )
+    return execute_endpoint_with_session(path=path, session=session)
+
+
+def execute_endpoint_with_session(path: str, session: HttpSession) -> (dict, dict, int):
+    validator = get_endpoint_validator(path=path)
+    status_code = 200
+    resp_body = {}
+
+    if validator is not None:
+        if not validator.validate(session.data):
+            resp_body = validator.errors
+            status_code = 400
+        else:
+            session._data = validator.normalized(session.data)
+
+    if status_code == 200:
+        resp_body = _endpoint_function(path=path)(session)
+        status_code = session.response_status
+
+    return resp_body, session.response_headers, status_code
+
+
+AWS_LAMBDA_EVENT_BODY_KEY = 'body'
+AWS_LAMBDA_EVENT_HEADERS_KEY = 'headers'
+AWS_LAMBDA_EVENT_QUERY_STRING_KEY = 'queryStringParameters'
+
+
+def aws_lambda_handler(event: dict, context=None):
+
+    path = event.get('path', '/error')
+
+    if context is not None:
+        Log.debug(f'Lambda function: {context.function_name}, path: {path}.')
+
+    body = event.get(AWS_LAMBDA_EVENT_BODY_KEY, '{}')
+    try:
+        if body is None:
+            body = {}
+        elif isinstance(body, dict):
+            pass
+        elif isinstance(body, str):
+            body = json.loads(body)
+    except (ValueError, TypeError):
+        pass
+
+    resp_body, response_headers, status_code = execute_endpoint(
+        path=path, headers=event.get(AWS_LAMBDA_EVENT_HEADERS_KEY, {}),
+        body=body,
+        parameters=event.get(AWS_LAMBDA_EVENT_QUERY_STRING_KEY, {})
+    )
+
+    try:
+        resp_body = json.dumps(resp_body)
+    except ValueError:
+        msg = 'Can not convert response body to JSON format.'
+        Log.exception(msg)
+        resp_body = msg
+        status_code = 500
+
+    return {
+
+        "statusCode": status_code,
+        AWS_LAMBDA_EVENT_HEADERS_KEY: response_headers,
+        AWS_LAMBDA_EVENT_BODY_KEY: resp_body
+    }

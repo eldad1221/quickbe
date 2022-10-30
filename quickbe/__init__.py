@@ -284,9 +284,10 @@ class WebServer:
                 html += WebServer._schema_documentation(schema=value.get("schema"), prefix=f'{prefix}{name}.')
         return html
 
-    ENDPOINT_DOC_PATH = '/quickbe-endpoint-doc/'
+    ENDPOINT_DOC_PATH = '/endpoint-doc/'
 
     @staticmethod
+    @app.route(f'/quickbe-endpoint-doc/<path:path>', methods=['GET'])
     @app.route(f'{ENDPOINT_DOC_PATH}<path:path>', methods=['GET'])
     def web_server_get_endpoint_doc(path: str):
         def do():
@@ -321,6 +322,7 @@ class WebServer:
         return 'File not found', 404
 
     @staticmethod
+    @app.route(f'/endpoints-index', methods=['GET'])
     @app.route(f'/quickbe-endpoints-index', methods=['GET'])
     def web_server_get_endpoints_index():
         def do():

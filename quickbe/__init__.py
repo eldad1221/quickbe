@@ -181,7 +181,8 @@ class WebServer:
     @staticmethod
     def is_developer(http_parameters: dict, http_headers) -> bool:
         key = http_parameters.get(DEVKEY_PARAMETER, '')
-        for dev_key in os.getenv(QUICKBE_DEVELOPERS_KEYS_KEY, '').split(' '):
+        for dev_key in os.getenv(QUICKBE_DEVELOPERS_KEYS_KEY, '').split(','):
+            dev_key = dev_key.strip()
             if dev_key.startswith(f'{key.strip()}:'):
                 dev_name = dev_key.split(':')[1]
                 Log.info(f'DEVELOPER ACCESS {dev_name} accessed path {http_headers.environ.get("REQUEST_URI")}')

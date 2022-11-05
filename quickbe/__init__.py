@@ -156,7 +156,10 @@ class HttpSession:
 
 
 QUICKBE_DOCUMENTATION_MODE_KEY = 'QUICKBE_DOCUMENTATION_MODE'
+QUICKBE_DEVELOPERS_KEYS_KEY = 'QUICKBE_DEVELOPERS_KEYS'
 QUICKBE_WEB_SERVER_ACCESS_KEY = 'QUICKBE_WEB_SERVER_ACCESS_KEY'
+
+DEVKEY_PARAMETER = 'devkey'
 
 
 class WebServer:
@@ -176,8 +179,19 @@ class WebServer:
             WebServer._requests_stack.pop(0)
 
     @staticmethod
-    def is_documentation_on() -> bool:
-        return os.getenv(QUICKBE_DOCUMENTATION_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes', 'on']
+    def is_developer(http_parameters: dict, http_headers) -> bool:
+        key = http_parameters.get(DEVKEY_PARAMETER, '')
+        for dev_key in os.getenv(QUICKBE_DEVELOPERS_KEYS_KEY, '').split(' '):
+            if dev_key.startswith(f'{key.strip()}:'):
+                dev_name = dev_key.split(':')[1]
+                Log.info(f'DEVELOPER ACCESS {dev_name} accessed path {http_headers.environ.get("REQUEST_URI")}')
+                return True
+        return False
+
+    @staticmethod
+    def is_documentation_on(http_parameters: dict, http_headers: dict) -> bool:
+        is_dev_mode = os.getenv(QUICKBE_DOCUMENTATION_MODE_KEY, '').lower().strip() in ['1', 'true', 'y', 'yes', 'on']
+        return bool(is_dev_mode + WebServer.is_developer(http_parameters=http_parameters, http_headers=http_headers))
 
     @staticmethod
     def requests_per_minute() -> float:
@@ -315,7 +329,7 @@ class WebServer:
                 Log.warning(msg=msg)
                 raise e
         try:
-            if WebServer.is_documentation_on():
+            if WebServer.is_documentation_on(http_parameters=request.args, http_headers=request.headers):
                 return do()
         except (AttributeError, KeyError):
             pass
@@ -328,13 +342,18 @@ class WebServer:
         def do():
             html = '<html><title>Endpoints index</title><body><h1>Endpoints Index</h1><div style="margin-left:20px">'
             endpoints_doc = OrderedDict(sorted(WEB_SERVER_ENDPOINTS_DOCS.items()))
+
+            devkey = request.args.get(DEVKEY_PARAMETER, '')
+            if devkey != '':
+                devkey = f'?{DEVKEY_PARAMETER}={devkey}'
+
             for path, doc in endpoints_doc.items():
-                html += f'<a href="{WebServer.ENDPOINT_DOC_PATH}{path}"><h3>{path}</h3></a>'
+                html += f'<a href="{WebServer.ENDPOINT_DOC_PATH}{path}{devkey}"><h3>{path}</h3></a>'
                 html += f'{doc}<br>'
             html += '</div></body></html>'
             return html, 200
         try:
-            if WebServer.is_documentation_on():
+            if WebServer.is_documentation_on(http_parameters=request.args, http_headers=request.headers):
                 return do()
         except (AttributeError, KeyError):
             pass

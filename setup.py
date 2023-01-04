@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="quickbe",
-    version="3.0.0",
+    version="4.2.0",
     author="Eldad Bishari",
     author_email="eldad@1221tlv.org",
     description="Quick and simple back-end infrastructure",
@@ -16,14 +16,9 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'flask==2.0.1',
+        'cerberus==1.3.4',
         'schedule==1.1.0',
-        'psutil==5.8.0',
-        'cachetools==4.2.4',
-        'python-dotenv==0.20.0',
-        'quickbeutils',
-        'quickbeserverless',
-        'requests~=2.27.1',
-        'Werkzeug~=2.0.1',
+        'psutil==5.9.4',
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

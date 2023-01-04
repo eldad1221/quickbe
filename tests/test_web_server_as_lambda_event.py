@@ -1,7 +1,6 @@
 import unittest
 from quickbelog import Log
-from quickbe import endpoint
-from quickbeserverless import aws_lambda_handler, HttpSession
+from quickbe import endpoint, aws_lambda_handler, HttpSession
 
 GREETING = 'Hello'
 
@@ -10,7 +9,7 @@ GREETING = 'Hello'
     'name': {'required': True, 'type': 'string'}
 }
 )
-def hello(session: HttpSession):
+def hello_from_aws(session: HttpSession):
     return f"{GREETING} {session.get('name')}"
 
 
@@ -20,7 +19,7 @@ class AsLambdaEventTestCase(unittest.TestCase):
         name = 'Suzi'
         expected_result = f'"{GREETING} {name}"'
         test_event = {
-            'path': 'hello',
+            'path': 'hello_from_aws',
             'body': {
                 'name': name
             }

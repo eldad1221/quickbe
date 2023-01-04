@@ -1,9 +1,20 @@
 from flask import redirect
-from quickbe import WebServer, endpoint, Log
-from quickbeserverless import HttpSession
+from quickbe import WebServer, endpoint, Log, HttpSession
 
 
-@endpoint(path='hi')
+def persona_non_grata(session: HttpSession):
+    name = session.get('name', '').lower()
+    if name in ['dracula', 'sauron', 'dart', 'molech']:
+        session.set_status(401)
+        return 'You are not welcome here!'
+
+
+@endpoint(path='v1/hi', doc='Say hello', example='Hello to you, from V1')
+def say_hello_v1(session: HttpSession):
+    return f'{say_hello(session=session)}, from V1'
+
+
+@endpoint(path='hi', doc='Say hello', example='Hello to you')
 def say_hello(session: HttpSession):
     name = session.get('name')
     if name is None:
@@ -12,21 +23,50 @@ def say_hello(session: HttpSession):
 
 
 @endpoint(validation={
-    'text': {'required': True, 'type': 'string'},
-    'name': {'required': False, 'type': 'string'},
-    'age': {'required': False, 'type': 'integer'}
-}
+    'text': {
+        'required': True, 'type': 'string',
+        'doc': 'Some text to echo', 'example': 'Hello world'
+    },
+    'name': {
+        'required': False, 'type': 'string',
+        'doc': 'Name, just for testing', 'example': 'John Doe'
+    },
+    'age': {
+        'required': False, 'type': 'integer',
+        'doc': 'Persons age', 'example': 42
+    },
+    'other_info': {
+        'doc': 'Other info for this person',
+        'type': 'dict',
+        'allow_unknown': False,
+        'required': True,
+        'schema': {
+            'address': {'type': 'string', 'required': True},
+            'description': {'type': 'string', 'required': True},
+            'zip_code': {'type': 'integer', 'default': -1, 'example': 1234567},
+        }
+    }
+},
+    doc='Echo text'
 )
 def echo(session: HttpSession):
-    return session.get_parameter('text')
+    return session.get('text')
 
 
-@endpoint(path='go', validation={'to': {'type': 'string', 'required': True}})
+@endpoint(path='go', validation={
+    'to': {
+        'type': 'string',
+        'required': True,
+        'doc': 'Url to redirect to',
+        'example': 'https://www.google.com'
+    }
+})
 def goto(session: HttpSession):
-    url = session.get_parameter('to')
+    url = session.get('to')
     Log.debug(f'Redirecting to {url}...')
     return redirect(url, code=302)
 
 
 if __name__ == '__main__':
+    WebServer.add_filter(persona_non_grata)
     WebServer.start(port=8888)

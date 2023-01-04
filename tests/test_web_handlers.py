@@ -1,12 +1,12 @@
 import unittest
-import quickbe
+from quickbe import HttpSession, is_valid_http_handler
 
 
-def demo_1(session: quickbe.HttpSession):
+def demo_1(session: HttpSession):
     return session.get('text')
 
 
-def demo_2(session: quickbe.HttpSession, s: str):
+def demo_2(session: HttpSession, s: str):
     return session.get('text')
 
 
@@ -18,13 +18,13 @@ class WebServerTestCase(unittest.TestCase):
 
     def test_http_handler(self):
 
-        self.assertEqual(True, quickbe._is_valid_http_handler(func=demo_1))
+        self.assertEqual(True, is_valid_http_handler(func=demo_1))
 
         with self.assertRaises(TypeError):
-            self.assertEqual(True, quickbe._is_valid_http_handler(func=demo_2))
+            self.assertEqual(True, is_valid_http_handler(func=demo_2))
 
         with self.assertRaises(TypeError):
-            self.assertEqual(True, quickbe._is_valid_http_handler(func=demo_3))
+            self.assertEqual(True, is_valid_http_handler(func=demo_3))
 
 
 if __name__ == '__main__':

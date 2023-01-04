@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="quickbe",
-    version="3.1.0",
+    version="3.0.0",
     author="Eldad Bishari",
     author_email="eldad@1221tlv.org",
     description="Quick and simple back-end infrastructure",
@@ -17,7 +17,7 @@ setuptools.setup(
     install_requires=[
         'flask==2.0.1',
         'schedule==1.1.0',
-        'psutil==5.9.4',
+        'psutil==5.8.0',
         'cachetools==4.2.4',
         'python-dotenv==0.20.0',
         'quickbeutils',

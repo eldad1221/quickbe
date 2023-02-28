@@ -365,7 +365,14 @@ class WebServer:
     @app.route('/<path:path>', methods=['GET', 'POST'])
     def dynamic_get(path: str):
         WebServer._register_request()
-        session = HttpSession(body=request.json, parameters=request.args, headers=request.headers)
+
+        body = {}
+        try:
+            body = request.json
+        except Exception:
+            pass
+        session = HttpSession(body=body, parameters=request.args, headers=request.headers)
+
         for web_filter in WebServer.web_filters:
             resp = web_filter(session)
             if session.response_status != 200:

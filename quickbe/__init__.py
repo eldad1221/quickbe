@@ -387,6 +387,7 @@ class WebServer:
             status_code = 404
             response_body = 'File not found'
         except Exception as e:
+            Log.exception(f'Endpoint {path} raised an exception')
             status_code = 500
             response_body = f'{e}'
         return response_body, status_code, response_headers
